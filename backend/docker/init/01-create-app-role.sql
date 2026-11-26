@@ -1,0 +1,7 @@
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'eidx_app') THEN
+    CREATE ROLE eidx_app LOGIN PASSWORD 'eidx_app_pw' NOSUPERUSER NOCREATEDB NOCREATEROLE;
+  END IF;
+END
+$$;

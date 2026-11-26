@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: eidx-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: eidx
+      POSTGRES_USER: eidx_owner
+      POSTGRES_PASSWORD: eidx_owner_pw
+    ports:
+      # 5433 keeps the local stack clear of a system PostgreSQL on 5432.
+      - "5433:5432"
+    volumes:
+      - eidx_pgdata:/var/lib/postgresql/data
+      - ./docker/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eidx_owner -d eidx"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  eidx_pgdata:
