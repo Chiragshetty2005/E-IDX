@@ -120,6 +120,9 @@ Base path `/api/v1`. Session cookie `eidx_session` (httpOnly).
 | POST | `/auth/logout` | Revokes the session. |
 | GET | `/auth/session` | Current user and permissions. |
 
+Every other route answers `401 session_expired` without a valid cookie. The client uses that to
+return to the sign-in page instead of showing stale screens.
+
 ### Student
 
 | Method | Path | Notes |

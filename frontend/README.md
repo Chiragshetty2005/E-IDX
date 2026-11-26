@@ -7,6 +7,33 @@ The app talks to the E-IDX API in `../backend` and falls back to the sample regi
 `src/data/mock.ts` when the API cannot be reached, so the demo still works with the backend
 switched off.
 
+## Signing in
+
+The app opens on `/signin`. There is no screen behind it until a session exists.
+
+1. On start-up the app calls `GET /auth/session` with a five second timeout.
+   * A valid session goes straight to the role home.
+   * `401` means nobody is signed in, so the sign-in page stays.
+   * A network error means the API is down, so the sign-in page says so and offers the
+     sample register.
+2. The sign-in page picks a role and calls `POST /auth/preview-login`. A student can
+   type a USN; an empty field uses the first student account in the register.
+3. The API answers with an HttpOnly session cookie. Every later request carries it, and the
+   API enforces the role and the record scope on the server.
+4. `Sign out` in the sidebar calls `POST /auth/logout` and returns to `/signin`.
+5. A session that expires while the app is open sends the person back to `/signin` with a
+   short notice, instead of leaving stale screens on screen.
+
+`Continue with sample data` opens the dashboards on the sample register in
+`src/data/mock.ts`, with no server session. The badge then reads `Preview data`.
+
+The preview sign-in is a demo affordance and must be replaced by campus SSO before
+deployment. The API can turn it off with `PREVIEW_AUTH=false`.
+
+The `Viewing as` control in the sidebar is a demo switcher for the seeded accounts. In live
+mode it signs in again through `POST /auth/preview-login`, so the server session and the
+screen always agree. The route guard in `App.tsx` is a preview convenience only.
+
 ## Live and preview modes
 
 The shell always shows where the numbers come from.
@@ -15,15 +42,10 @@ The shell always shows where the numbers come from.
 | --- | --- |
 | `Live API` | The browser holds a server session and every screen reads from the API. |
 | `Connecting to the API` | The session check is still running. |
-| `Preview data` | The API is unreachable, so the sample register is shown. The reason is in the badge tooltip. |
+| `Preview data` | The app is showing the sample register instead of the API. |
 
-On start-up the app calls `GET /auth/session`. If that returns `401`, it signs in with the
-preview sign-in endpoint using the role stored in `localStorage` under `eidx-role`. The preview
-sign-in is a demo affordance and must be replaced by campus SSO before deployment.
-
-Switching roles in live mode calls `POST /auth/preview-login` again, so the server session and
-the screen always agree. The route guard in `App.tsx` is a preview convenience only: the API
-enforces the role on every request.
+The role is kept in `localStorage` under `eidx-role`, so the sign-in page opens on the role
+that was used last.
 
 ## Run locally
 
@@ -117,10 +139,11 @@ src/
   pages/admin/      Admin overview, students, verification log, insights
   pages/faculty/    Cohort, student detail, sessions
   pages/student/    My card, campus services
+  pages/SignIn.tsx  Sign-in page, outside the shell
   pages/Verify.tsx  Reader verification simulator
-  App.tsx           Route map and preview role guard
+  App.tsx           Route map, session gate and role guard
   index.css         Design tokens and named text styles
-  session.tsx       Server session, data mode and role state
+  session.tsx       Server session, sign-in, data mode and role state
   types.ts          Domain types shared with the API
 ```
 
@@ -135,8 +158,8 @@ These are product invariants, not optional polish:
 2. **The backend decides trust.** The card displays a signed, short-lived pass. The server checks
    signature, expiry, card status and session window before writing attendance or granting entry.
 3. **Authenticate and authorise every request.** The API uses an HttpOnly session cookie and
-   enforces role and record scope on the server. The client-side role guard is only a preview
-   convenience.
+   enforces role and record scope on the server. The sign-in page and the route guard in the
+   browser are a convenience; the API decides who may read and write what.
 4. **Audit sensitive reads and writes.** Staff access to risk explanations and all card,
    intervention, session and revocation changes are recorded with actor, reason and timestamp.
 5. **Minimise data.** Endpoints return only the fields a screen needs. Socioeconomic attributes
@@ -156,6 +179,8 @@ These are product invariants, not optional polish:
 - The faculty attendance trend chart is illustrative. Weekly attendance history is not stored yet.
 - In preview mode, mentor notes, queued card updates and session state live in component memory
   and reset on reload.
+- The reader key is a shared device credential. Production should issue a key per reader with
+  rotation.
 
 ## Next steps
 
