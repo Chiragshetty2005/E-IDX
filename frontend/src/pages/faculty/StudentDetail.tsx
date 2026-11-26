@@ -42,7 +42,7 @@ export function FacultyStudent() {
 
   const narrative =
     student.risk === 'support'
-      ? `${student.driver} Attendance and internal marks carry the largest weight in this run.`
+      ? `${student.driver} Assessment scores and recent VLE activity carry the largest weight in this run.`
       : student.risk === 'watch'
         ? `${student.driver} The model places this student in the watch tier rather than the support group.`
         : `No concerns this term. ${student.driver}`
@@ -136,8 +136,9 @@ export function FacultyStudent() {
             </div>
 
             <p className="mt-6 caption-5 text-ink-500">
-              Generated 21 November 2026 with {modelInfo.name} build {modelInfo.build}. Use this as
-              decision support, not as an automatic sanction.
+              Generated 26 November 2026 with {modelInfo.name} build {modelInfo.build}. The model
+              uses assessment and VLE features, not campus attendance. Use this as decision
+              support, not as an automatic sanction.
             </p>
           </section>
 

@@ -4,10 +4,10 @@ import { RiskPill } from '../../components/Status'
 import { campusRisk, globalFeatures, modelInfo, watchlist } from '../../data/mock'
 
 const metrics = [
-  { label: 'Accuracy', value: modelInfo.accuracy },
-  { label: 'Macro F1', value: modelInfo.macroF1 },
-  { label: 'Support recall', value: modelInfo.atRiskRecall },
   { label: 'ROC AUC', value: modelInfo.rocAuc },
+  { label: 'PR AUC', value: modelInfo.prAuc },
+  { label: 'Top-20% recall', value: modelInfo.atRiskRecall },
+  { label: 'Temporal ROC AUC', value: modelInfo.temporalRocAuc },
 ]
 
 export function AdminInsights() {
@@ -18,8 +18,8 @@ export function AdminInsights() {
         description="Risk classes and model explanations for the current term."
         meta={
           <>
-            <span className="caption-4 text-ink-500">Validation run, 18 November 2026</span>
-            <span className="caption-4 text-ink-500">Semester VI</span>
+            <span className="caption-4 text-ink-500">Validation run, 26 November 2026</span>
+            <span className="caption-4 text-ink-500">Cutoff day {modelInfo.cutoffDay}</span>
           </>
         }
       />
@@ -46,9 +46,10 @@ export function AdminInsights() {
 
             <div className="mt-8 border-t border-paper-50/20 pt-4">
               <p className="caption-5 text-paper-50/60">
-                Trained on {modelInfo.records.toLocaleString('en-IN')} anonymised records with{' '}
-                {modelInfo.features} features. Compared with XGBoost, Random Forest and a logistic
-                regression baseline.
+                Trained on {modelInfo.records.toLocaleString('en-IN')} active module enrolments from{' '}
+                {modelInfo.students.toLocaleString('en-IN')} students with {modelInfo.features} features.
+                Compared with a logistic regression baseline and checked on a later-presentation
+                holdout.
               </p>
             </div>
           </div>
@@ -57,14 +58,14 @@ export function AdminInsights() {
         <section className="lg:col-span-7">
           <SectionHead
             title="Risk across the university"
-            description="Three classes from the latest scoring run."
+            description="Capacity-based tiers from the latest scoring run."
           />
           <div className="mt-4 rounded-2xl bg-paper-100 p-4 sm:p-6">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className="heading-5">{campusRisk.support} students need support</p>
                 <p className="mt-1 caption-2 text-ink-500">
-                  Up from 139 at the last weekly run.
+                  Top 10% flagged; the next 20% are watched.
                 </p>
               </div>
               <p className="font-mono caption-4 text-ink-500">
@@ -80,8 +81,8 @@ export function AdminInsights() {
               />
             </div>
             <p className="mt-6 max-w-[680px] caption-5 text-ink-500 text-pretty">
-              Socio economic attributes are excluded from the deployed model. Performance is checked
-              across subgroups, and a flag is always reviewed by a mentor.
+              Socio economic attributes are excluded from the deployed model and used only for
+              subgroup checks. A flag is always reviewed by a mentor.
             </p>
           </div>
         </section>
@@ -97,8 +98,8 @@ export function AdminInsights() {
             <FeatureBars features={globalFeatures} />
           </div>
           <p className="mt-6 max-w-[680px] caption-5 text-ink-500 text-pretty">
-            Attendance is captured by the card itself, so the model gets one of its strongest
-            predictors without a separate register.
+            The model reads VLE engagement and assessment behaviour. Campus attendance is not a
+            model input, and card taps are never used to train it.
           </p>
         </section>
 

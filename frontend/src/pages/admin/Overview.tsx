@@ -65,7 +65,7 @@ export function AdminOverview() {
           <div className="sm:pl-6">
             <dt className="caption-5 text-ink-500">Students needing support</dt>
             <dd className="mt-1 font-mono heading-4 tabular-nums">{campusStats.needsSupport}</dd>
-            <p className="mt-1 caption-5 text-ink-500">3.0% of the student body</p>
+            <p className="mt-1 caption-5 text-ink-500">10.0% of the student body</p>
           </div>
         </dl>
       </section>
@@ -204,7 +204,7 @@ export function AdminOverview() {
             <div>
               <p className="heading-5">{campusRisk.support} students need support</p>
               <p className="mt-1 caption-2 text-ink-500">
-                CatBoost build 2026.11.18, trained on 2,914 records.
+                CatBoost build 2026.11.26, trained on 26,361 active enrolments at day 60.
               </p>
             </div>
             <p className="caption-5 text-ink-500">

@@ -6,6 +6,29 @@ operations, academic support, student services and reader verification.
 The app is intentionally self-contained for now. It uses realistic sample data and does not
 connect to an API, database, card or reader.
 
+The backend that implements this contract now lives in `../backend`. The frontend still reads
+`src/data/mock.ts`; the API client under `src/api/` is the next step. The sample data already
+mirrors the real trained model, so the screens do not have to change when the client lands.
+
+## Model metadata in the preview
+
+The preview shows the real model that was trained locally on OULAD, not placeholder numbers.
+
+| Item | Value |
+| --- | --- |
+| Model | CatBoost, build `2026.11.26` |
+| Training data | 26,361 active module enrolments, 23,985 students, 45 features |
+| Cutoff | Day 60 of the module |
+| Validation | Grouped CV ROC-AUC 0.8344, PR-AUC 0.8151, recall@20% 0.4314 |
+| Temporal holdout | ROC-AUC 0.8044 on the 2014J presentation |
+| Tiers | support ≥ 0.9134, watch ≥ 0.5409, otherwise on-track (top 10% and next 20%) |
+| Drivers | Assessment scores 27%, recent VLE activity 21%, module context 15%, submission timing 12%, missed assessments 11% |
+
+The model reads assessment and VLE behaviour. Campus attendance is **not** a model input, and card
+taps are never used to train it. Socioeconomic attributes are excluded from the inputs and are
+used only for subgroup checks. The fairness audit and the full model card live in
+`../ml/artifacts/`.
+
 ## Run locally
 
 Requires Node 22 or newer.
@@ -84,8 +107,8 @@ Data currently comes from `src/data/mock.ts`. Components consume the domain type
 `src/types.ts`. When the backend exists, replace those imports with API calls while keeping the
 same component-facing shapes. The pages should not need to know how data is fetched.
 
-The endpoints below are a proposed contract, not an implemented API. Prefix them with the
-backend's versioned base path, keep responses JSON and use ISO 8601 timestamps.
+The contract below is implemented in `../backend` under the `/api/v1` prefix, with server-side
+role checks, HttpOnly session cookies and ISO 8601 timestamps.
 
 | Surface | Proposed endpoints | Notes |
 | --- | --- | --- |
@@ -134,20 +157,21 @@ These are product invariants, not optional polish:
 
 ## Preview limitations
 
-- No authentication, API, database, reader hardware or card provisioning.
+- The frontend still reads sample data; the API client has not been wired in yet. The backend in
+  `../backend` serves the same shapes.
+- The role switcher is not a security boundary. The backend enforces roles on the server and
+  issues real sessions, but the preview sign-in is not campus SSO.
 - Mentor notes, queued card updates, session state and verification outcomes live in component
   memory and reset on reload.
 - The verification console runs scripted test cases; it does not scan a real QR code or NFC tag.
 - Dates and times are fixed sample values. Some simulated actions use a mock clock so they stay
   inside the open session window.
-- The role switcher is not a security boundary.
 
 ## Next steps
 
-1. Implement the backend service and database schema against the contract above.
-2. Add SSO, server-side RBAC and the `GET /me` bootstrap.
-3. Replace `src/data/mock.ts` imports with an API client under `src/api/`.
-4. Integrate signed rotating passes and reader verification.
-5. Connect the risk model and explanation service without exposing it to student surfaces.
-6. Add end-to-end tests for role boundaries, card updates, verification outcomes, attendance
+1. Add the API client under `src/api/` and replace the `src/data/mock.ts` imports.
+2. Replace the preview sign-in with campus SSO and keep the server-side role checks.
+3. Integrate signed rotating passes and reader verification with real hardware.
+4. Add end-to-end tests for role boundaries, card updates, verification outcomes, attendance
    and mentor notes.
+5. Run the model on live institutional data and re-check the fairness gaps before any pilot.
