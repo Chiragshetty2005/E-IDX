@@ -68,7 +68,7 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
 }
 
 function RoleSwitcher({ id, onSwitch }: { id: string; onSwitch?: () => void }) {
-  const { role, setRole } = useSession()
+  const { role, setRole, switching, mode } = useSession()
   const navigate = useNavigate()
 
   return (
@@ -80,6 +80,7 @@ function RoleSwitcher({ id, onSwitch }: { id: string; onSwitch?: () => void }) {
         id={id}
         className="field"
         value={role}
+        disabled={switching}
         onChange={(event) => {
           const next = event.target.value as Role
           setRole(next)
@@ -91,6 +92,11 @@ function RoleSwitcher({ id, onSwitch }: { id: string; onSwitch?: () => void }) {
         <option value="faculty">Faculty, CSE</option>
         <option value="student">Student, card holder</option>
       </select>
+      <p className="mt-1 caption-5 text-ink-500">
+        {mode === 'live'
+          ? 'The API checks the role on every request.'
+          : 'Preview only. The API is not reachable.'}
+      </p>
     </div>
   )
 }
@@ -115,9 +121,40 @@ function UserPanel({ idPrefix }: { idPrefix: string }) {
   )
 }
 
-function PreviewBadge() {
+/**
+ * Shows where the numbers on screen come from. In live mode the browser is
+ * signed in to the E-IDX API; otherwise the app is showing the preview
+ * register.
+ */
+function DataModeBadge() {
+  const { mode, switching, authError } = useSession()
+
+  if (mode === 'checking') {
+    return (
+      <p className="inline-flex items-center gap-2 rounded-full bg-paper-0 px-2 py-1 caption-5 text-ink-500">
+        <span className="size-2 rounded-full bg-ink-300" aria-hidden="true" />
+        Connecting to the API
+      </p>
+    )
+  }
+
+  if (mode === 'live') {
+    return (
+      <p
+        className="inline-flex items-center gap-2 rounded-full bg-paper-0 px-2 py-1 caption-5 text-ink-500"
+        title="Signed in to the E-IDX API with a server session."
+      >
+        <span className="size-2 rounded-full bg-verified" aria-hidden="true" />
+        {switching ? 'Switching role…' : 'Live API'}
+      </p>
+    )
+  }
+
   return (
-    <p className="inline-flex items-center gap-2 rounded-full bg-paper-0 px-2 py-1 caption-5 text-ink-500">
+    <p
+      className="inline-flex items-center gap-2 rounded-full bg-paper-0 px-2 py-1 caption-5 text-ink-500"
+      title={authError ?? 'The API is not reachable, so the sample register is shown.'}
+    >
       <span className="size-2 rounded-full bg-attention" aria-hidden="true" />
       Preview data
     </p>
@@ -163,7 +200,7 @@ function Sidebar() {
       </nav>
 
       <div className="space-y-3">
-        <PreviewBadge />
+        <DataModeBadge />
         <UserPanel idPrefix="desktop" />
       </div>
     </aside>
@@ -248,7 +285,7 @@ function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
         </nav>
 
         <div className="space-y-3">
-          <PreviewBadge />
+          <DataModeBadge />
           <div className="rounded-2xl bg-paper-0 p-2">
             <div className="flex items-center gap-2">
               <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-ink-900 text-paper-50 caption-4">
@@ -266,6 +303,26 @@ function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
         </div>
       </div>
     </div>
+  )
+}
+
+function FooterNote() {
+  const { mode } = useSession()
+
+  if (mode === 'live') {
+    return (
+      <p className="rule pt-4 caption-5 text-ink-500">
+        Connected to the E-IDX API. Academic risk stays on staff screens: it never reaches a student
+        card, a campus pass or a card update.
+      </p>
+    )
+  }
+
+  return (
+    <p className="rule pt-4 caption-5 text-ink-500">
+      E-IDX frontend preview. The campus API is not reachable, so these screens use sample data and
+      are not connected to a card or server.
+    </p>
   )
 }
 
@@ -314,10 +371,7 @@ export function AppShell() {
         </main>
 
         <footer className="mx-auto w-full max-w-7xl px-4 pb-8 sm:px-6 lg:px-10">
-          <p className="rule pt-4 caption-5 text-ink-500">
-            E-IDX frontend preview. This screen uses sample data and is not connected to a card or
-            server.
-          </p>
+          <FooterNote />
         </footer>
       </div>
     </div>

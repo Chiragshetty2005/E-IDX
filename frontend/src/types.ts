@@ -54,10 +54,62 @@ export interface Student {
   interventions: Intervention[]
 }
 
+/**
+ * The identity fields the e-ink card and the QR pass need. Both the staff
+ * `Student` record and the student-facing `StudentProfile` satisfy it, so the
+ * card component can be reused without carrying risk fields into `/me`.
+ */
+export interface CardHolder {
+  usn: string
+  name: string
+  initials: string
+  programme: string
+  semester: string
+  section: string
+  attendance: number
+  card: Card
+}
+
+export interface StudentProfile extends CardHolder {
+  cgpa: number
+  backlogs: number
+  internalMarks: number
+  internalMax: number
+  assignmentRate: number
+  libraryVisits: number
+  mentor: string
+  courses: CourseAttendance[]
+  sgpa: { term: string; value: number }[]
+}
+
+export interface Exam {
+  code: string
+  title: string
+  date: string
+  time: string
+  hall: string
+}
+
+export interface LibraryLoan {
+  title: string
+  due: string
+  status: string
+}
+
+export interface FeeReceipt {
+  term: string
+  amount: string
+  paidOn: string
+  receipt: string
+  status: string
+}
+
 export interface Verification {
   id: string
   time: string
   usn: string
+  name?: string
+  initials?: string
   method: VerificationMethod
   location: string
   reader: string
@@ -68,6 +120,8 @@ export interface Verification {
 export interface CardUpdate {
   id: string
   usn: string
+  name?: string
+  cardId?: string
   change: string
   time: string
   state: 'queued' | 'confirmed'
