@@ -1,0 +1,194 @@
+{
+  "model_version": "catboost-cutoff60-20261126062250",
+  "created_at_utc": "2026-11-26T06:22:50.908540+00:00",
+  "model_file": "catboost_model.cbm",
+  "logistic_file": "logistic_model.joblib",
+  "feature_columns": [
+    "code_module",
+    "num_of_prev_attempts",
+    "studied_credits",
+    "registration_lead_days",
+    "module_presentation_length",
+    "assessment_count_total",
+    "first_assessment_day",
+    "weight_due_60",
+    "n_due_60",
+    "n_submitted_60",
+    "n_ontime_60",
+    "n_late_60",
+    "n_scored_60",
+    "n_banked_60",
+    "avg_score_60",
+    "weighted_score_60",
+    "min_score_60",
+    "max_score_60",
+    "first_score_60",
+    "last_score_60",
+    "submission_rate_60",
+    "ontime_rate_60",
+    "n_missing_60",
+    "days_since_last_submission_60",
+    "has_assessment_60",
+    "vle_clicks_60",
+    "log_vle_clicks_60",
+    "vle_active_days_60",
+    "vle_distinct_sites_60",
+    "vle_clicks_per_active_day_60",
+    "vle_clicks_30",
+    "vle_active_days_30",
+    "vle_clicks_31_60",
+    "vle_active_days_31_60",
+    "vle_clicks_last_14_days_60",
+    "vle_active_days_last_14_days_60",
+    "days_since_last_vle_60",
+    "has_vle_60",
+    "forum_clicks_60",
+    "content_clicks_60",
+    "quiz_clicks_60",
+    "forum_active_days_60",
+    "forum_share_60",
+    "content_share_60",
+    "quiz_share_60"
+  ],
+  "feature_groups": {
+    "Assessment scores": [
+      "avg_score_60",
+      "weighted_score_60",
+      "min_score_60",
+      "max_score_60",
+      "first_score_60",
+      "last_score_60"
+    ],
+    "Missed assessments": [
+      "n_missing_60",
+      "n_due_60",
+      "n_submitted_60",
+      "has_assessment_60",
+      "submission_rate_60"
+    ],
+    "Submission timing": [
+      "n_ontime_60",
+      "n_late_60",
+      "ontime_rate_60",
+      "days_since_last_submission_60",
+      "n_scored_60"
+    ],
+    "Recent VLE activity": [
+      "vle_active_days_last_14_days_60",
+      "vle_clicks_last_14_days_60",
+      "vle_active_days_31_60",
+      "vle_clicks_31_60",
+      "days_since_last_vle_60"
+    ],
+    "VLE breadth": [
+      "vle_distinct_sites_60",
+      "content_clicks_60",
+      "content_share_60",
+      "forum_clicks_60",
+      "forum_active_days_60",
+      "forum_share_60",
+      "quiz_clicks_60",
+      "quiz_share_60"
+    ],
+    "Total VLE engagement": [
+      "vle_clicks_60",
+      "log_vle_clicks_60",
+      "vle_active_days_60",
+      "vle_clicks_per_active_day_60",
+      "vle_clicks_30",
+      "vle_active_days_30",
+      "has_vle_60"
+    ],
+    "Prior attempts": [
+      "num_of_prev_attempts"
+    ],
+    "Credits and registration": [
+      "studied_credits",
+      "registration_lead_days"
+    ],
+    "Module context": [
+      "code_module",
+      "module_presentation_length",
+      "assessment_count_total",
+      "first_assessment_day",
+      "weight_due_60"
+    ],
+    "Banked credit": [
+      "n_banked_60"
+    ]
+  },
+  "categorical_features": [
+    "code_module"
+  ],
+  "cutoff_day": 60,
+  "target": "at_risk",
+  "target_positive_classes": [
+    "Fail",
+    "Withdrawn"
+  ],
+  "needs_support_threshold": 0.9121777004280444,
+  "watch_threshold": 0.5401580952149441,
+  "risk_tier_labels": {
+    "high": "needs-support",
+    "watch": "watch",
+    "low": "on-track"
+  },
+  "feature_table_sha256": "f2775d826b63fb91313481f130e42ba2fc1d20f4715142d835614aa71b6ed036",
+  "dataset_rows": 26361,
+  "at_risk_rate": 0.4163726717499336,
+  "cross_validation_auc": 0.8344505096829576,
+  "cross_validation_pr_auc": 0.8151337404366125,
+  "recall_at_20pct": 0.43230685131195334,
+  "temporal_test_auc": 0.8029595697110357,
+  "temporal_test_pr_auc": 0.7560555786404033,
+  "shap_group_importance": [
+    {
+      "group": "Assessment scores",
+      "share": 0.28295625954383224
+    },
+    {
+      "group": "Recent VLE activity",
+      "share": 0.21289438858863025
+    },
+    {
+      "group": "Module context",
+      "share": 0.15491198954394456
+    },
+    {
+      "group": "Submission timing",
+      "share": 0.1196031931589187
+    },
+    {
+      "group": "Missed assessments",
+      "share": 0.10461134296730497
+    },
+    {
+      "group": "VLE breadth",
+      "share": 0.0580708245549719
+    },
+    {
+      "group": "Total VLE engagement",
+      "share": 0.03543935737825231
+    },
+    {
+      "group": "Prior attempts",
+      "share": 0.019071038170971034
+    },
+    {
+      "group": "Credits and registration",
+      "share": 0.010043438311730312
+    },
+    {
+      "group": "Banked credit",
+      "share": 0.002398167781443511
+    }
+  ],
+  "fairness_selection_gaps": {
+    "gender": 0.05664863444788429,
+    "disability": 0.05993299658777343,
+    "age_band": 0.11696245328904444,
+    "imd_band": 0.13205619159110302,
+    "region": 0.09735228463925691,
+    "highest_education": 0.2054641886170165
+  }
+}

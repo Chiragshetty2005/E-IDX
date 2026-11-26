@@ -1,0 +1,4 @@
+.venv/
+data/oulad.duckdb
+data/duckdb_tmp/
+__pycache__/

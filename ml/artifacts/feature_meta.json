@@ -1,0 +1,159 @@
+{
+  "created_at_utc": "2026-11-26T05:50:33.466826+00:00",
+  "dataset": "OULAD",
+  "cutoff_day": 60,
+  "target": "at_risk",
+  "target_positive_classes": [
+    "Fail",
+    "Withdrawn"
+  ],
+  "cohort_rule": "date_unregistration IS NULL OR date_unregistration > 60",
+  "feature_columns": [
+    "code_module",
+    "num_of_prev_attempts",
+    "studied_credits",
+    "registration_lead_days",
+    "module_presentation_length",
+    "assessment_count_total",
+    "first_assessment_day",
+    "weight_due_60",
+    "n_due_60",
+    "n_submitted_60",
+    "n_ontime_60",
+    "n_late_60",
+    "n_scored_60",
+    "n_banked_60",
+    "avg_score_60",
+    "weighted_score_60",
+    "min_score_60",
+    "max_score_60",
+    "first_score_60",
+    "last_score_60",
+    "submission_rate_60",
+    "ontime_rate_60",
+    "n_missing_60",
+    "days_since_last_submission_60",
+    "has_assessment_60",
+    "vle_clicks_60",
+    "log_vle_clicks_60",
+    "vle_active_days_60",
+    "vle_distinct_sites_60",
+    "vle_clicks_per_active_day_60",
+    "vle_clicks_30",
+    "vle_active_days_30",
+    "vle_clicks_31_60",
+    "vle_active_days_31_60",
+    "vle_clicks_last_14_days_60",
+    "vle_active_days_last_14_days_60",
+    "days_since_last_vle_60",
+    "has_vle_60",
+    "forum_clicks_60",
+    "content_clicks_60",
+    "quiz_clicks_60",
+    "forum_active_days_60",
+    "forum_share_60",
+    "content_share_60",
+    "quiz_share_60"
+  ],
+  "categorical_features": [
+    "code_module"
+  ],
+  "numeric_features": [
+    "num_of_prev_attempts",
+    "studied_credits",
+    "registration_lead_days",
+    "module_presentation_length",
+    "assessment_count_total",
+    "first_assessment_day",
+    "weight_due_60",
+    "n_due_60",
+    "n_submitted_60",
+    "n_ontime_60",
+    "n_late_60",
+    "n_scored_60",
+    "n_banked_60",
+    "avg_score_60",
+    "weighted_score_60",
+    "min_score_60",
+    "max_score_60",
+    "first_score_60",
+    "last_score_60",
+    "submission_rate_60",
+    "ontime_rate_60",
+    "n_missing_60",
+    "days_since_last_submission_60",
+    "has_assessment_60",
+    "vle_clicks_60",
+    "log_vle_clicks_60",
+    "vle_active_days_60",
+    "vle_distinct_sites_60",
+    "vle_clicks_per_active_day_60",
+    "vle_clicks_30",
+    "vle_active_days_30",
+    "vle_clicks_31_60",
+    "vle_active_days_31_60",
+    "vle_clicks_last_14_days_60",
+    "vle_active_days_last_14_days_60",
+    "days_since_last_vle_60",
+    "has_vle_60",
+    "forum_clicks_60",
+    "content_clicks_60",
+    "quiz_clicks_60",
+    "forum_active_days_60",
+    "forum_share_60",
+    "content_share_60",
+    "quiz_share_60"
+  ],
+  "n_features": 45,
+  "stats": {
+    "feature_rows": 26361,
+    "active_students": 23985,
+    "at_risk_rows": 10976,
+    "at_risk_rate": 0.4163726717499336,
+    "all_enrollments": 32593,
+    "early_unregistered": 6232,
+    "no_vle_rows": 563,
+    "no_assessment_rows": 3975,
+    "missing_score_rows": 3982
+  },
+  "source_files": {
+    "courses.csv": {
+      "sha256": "4f16eee7454b15e109b0a21a0e43be820e6846ed6f9301bb7feb5ab5ad737a75",
+      "bytes": 526
+    },
+    "assessments.csv": {
+      "sha256": "8cc738fb88ad760571d6f2a23059bfee0ffcae3bcd830514c9cbd5c6d5a046f1",
+      "bytes": 8200
+    },
+    "studentInfo.csv": {
+      "sha256": "7e6f3e474a5eee00639d2a414a6c7e928745823c2d2c2563ca1780145f99b0d6",
+      "bytes": 3461652
+    },
+    "studentRegistration.csv": {
+      "sha256": "0d32676285372aaf2e7a80304e5b274b4fba24313e2ca4c04317225e1ec90170",
+      "bytes": 1109984
+    },
+    "studentAssessment.csv": {
+      "sha256": "fd5320786328d05af841ee7dd4b5871b9dada3b9fe9d6a3642b2f42635510a6e",
+      "bytes": 5690310
+    },
+    "vle.csv": {
+      "sha256": "d1b28303dea802ad87b4484e1196e878e06824850b9a4fe8aa34693439fe87e9",
+      "bytes": 260126
+    },
+    "studentVle.csv": {
+      "sha256": "52668253d876c5becbcb72185977152700cecab2942aca807fecc3dd54b937f0",
+      "bytes": 453836331
+    }
+  },
+  "software": {
+    "python": "3.12.3",
+    "duckdb": "1.5.6",
+    "pandas": "2.3.3",
+    "pyarrow": "21.0.0",
+    "scikit-learn": "1.9.1",
+    "catboost": "1.2.10",
+    "shap": "0.54.1",
+    "numpy": "2.5.5"
+  }
+}

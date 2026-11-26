@@ -1,0 +1,405 @@
+{
+  "status": "completed",
+  "top20_threshold": 0.7241877148292037,
+  "attributes": {
+    "gender": [
+      {
+        "group": "M",
+        "n": 14469,
+        "positives": 6213,
+        "at_risk_rate": 0.42940078789135394,
+        "selection_rate_top20": 0.22558573501969728,
+        "recall_top20": 0.47593755029776275,
+        "roc_auc": 0.8513107090097408,
+        "pr_auc": 0.838767097393605
+      },
+      {
+        "group": "F",
+        "n": 11892,
+        "positives": 4763,
+        "at_risk_rate": 0.4005213588967373,
+        "selection_rate_top20": 0.168937100571813,
+        "recall_top20": 0.37560361116943103,
+        "roc_auc": 0.8115267700800817,
+        "pr_auc": 0.781796591278982
+      }
+    ],
+    "disability": [
+      {
+        "group": "N",
+        "n": 23900,
+        "positives": 9722,
+        "at_risk_rate": 0.40677824267782425,
+        "selection_rate_top20": 0.19443514644351464,
+        "recall_top20": 0.42933552766920385,
+        "roc_auc": 0.8345981975023585,
+        "pr_auc": 0.810772755446546
+      },
+      {
+        "group": "Y",
+        "n": 2461,
+        "positives": 1254,
+        "at_risk_rate": 0.5095489638358391,
+        "selection_rate_top20": 0.2543681430312881,
+        "recall_top20": 0.45614035087719296,
+        "roc_auc": 0.8247298784733922,
+        "pr_auc": 0.8478704505798917
+      }
+    ],
+    "age_band": [
+      {
+        "group": "0-35",
+        "n": 18325,
+        "positives": 7993,
+        "at_risk_rate": 0.4361800818553888,
+        "selection_rate_top20": 0.21478854024556618,
+        "recall_top20": 0.44326285499812335,
+        "roc_auc": 0.8342685363146102,
+        "pr_auc": 0.8246556496572588
+      },
+      {
+        "group": "35-55",
+        "n": 7852,
+        "positives": 2932,
+        "at_risk_rate": 0.37340804890473767,
+        "selection_rate_top20": 0.16798267957208354,
+        "recall_top20": 0.4051841746248295,
+        "roc_auc": 0.8299298669572643,
+        "pr_auc": 0.7891742668376198
+      },
+      {
+        "group": "55<=",
+        "n": 184,
+        "positives": 51,
+        "at_risk_rate": 0.27717391304347827,
+        "selection_rate_top20": 0.09782608695652174,
+        "recall_top20": 0.29411764705882354,
+        "roc_auc": 0.8611233967271119,
+        "pr_auc": 0.7364415829799847
+      }
+    ],
+    "imd_band": [
+      {
+        "group": "30-40%",
+        "n": 2870,
+        "positives": 1210,
+        "at_risk_rate": 0.42160278745644597,
+        "selection_rate_top20": 0.2073170731707317,
+        "recall_top20": 0.4396694214876033,
+        "roc_auc": 0.8313183311759436,
+        "pr_auc": 0.8158387851287692
+      },
+      {
+        "group": "20-30%",
+        "n": 2849,
+        "positives": 1360,
+        "at_risk_rate": 0.4773604773604774,
+        "selection_rate_top20": 0.23903123903123902,
+        "recall_top20": 0.4602941176470588,
+        "roc_auc": 0.8413359736103978,
+        "pr_auc": 0.8529627977543243
+      },
+      {
+        "group": "10-20",
+        "n": 2704,
+        "positives": 1346,
+        "at_risk_rate": 0.4977810650887574,
+        "selection_rate_top20": 0.2459319526627219,
+        "recall_top20": 0.45170876671619614,
+        "roc_auc": 0.8250945910755043,
+        "pr_auc": 0.8429755143983797
+      },
+      {
+        "group": "40-50%",
+        "n": 2585,
+        "positives": 1068,
+        "at_risk_rate": 0.41315280464216636,
+        "selection_rate_top20": 0.19961315280464217,
+        "recall_top20": 0.42790262172284643,
+        "roc_auc": 0.8301333328395537,
+        "pr_auc": 0.8071812157351657
+      },
+      {
+        "group": "50-60%",
+        "n": 2575,
+        "positives": 1051,
+        "at_risk_rate": 0.40815533980582525,
+        "selection_rate_top20": 0.19689320388349515,
+        "recall_top20": 0.4319695528068506,
+        "roc_auc": 0.8398947009597159,
+        "pr_auc": 0.8154161865657523
+      },
+      {
+        "group": "0-10%",
+        "n": 2525,
+        "positives": 1361,
+        "at_risk_rate": 0.539009900990099,
+        "selection_rate_top20": 0.26732673267326734,
+        "recall_top20": 0.4628949301983835,
+        "roc_auc": 0.8315848211467715,
+        "pr_auc": 0.8675643602237918
+      },
+      {
+        "group": "60-70%",
+        "n": 2406,
+        "positives": 898,
+        "at_risk_rate": 0.37323358270989193,
+        "selection_rate_top20": 0.16999168744804655,
+        "recall_top20": 0.3986636971046771,
+        "roc_auc": 0.8233925374985971,
+        "pr_auc": 0.774822462687107
+      },
+      {
+        "group": "70-80%",
+        "n": 2406,
+        "positives": 923,
+        "at_risk_rate": 0.38362427265170407,
+        "selection_rate_top20": 0.1708229426433915,
+        "recall_top20": 0.39544962080173346,
+        "roc_auc": 0.8317113636745522,
+        "pr_auc": 0.7925439931842571
+      },
+      {
+        "group": "80-90%",
+        "n": 2285,
+        "positives": 792,
+        "at_risk_rate": 0.3466083150984683,
+        "selection_rate_top20": 0.1562363238512035,
+        "recall_top20": 0.4116161616161616,
+        "roc_auc": 0.8268662850879863,
+        "pr_auc": 0.7778127521429128
+      },
+      {
+        "group": "90-100%",
+        "n": 2158,
+        "positives": 699,
+        "at_risk_rate": 0.32391102873030586,
+        "selection_rate_top20": 0.14921223354958293,
+        "recall_top20": 0.4005722460658083,
+        "roc_auc": 0.8415037246002073,
+        "pr_auc": 0.7736374330788465
+      },
+      {
+        "group": "Unknown",
+        "n": 998,
+        "positives": 268,
+        "at_risk_rate": 0.2685370741482966,
+        "selection_rate_top20": 0.13527054108216433,
+        "recall_top20": 0.41044776119402987,
+        "roc_auc": 0.7985381312615005,
+        "pr_auc": 0.675085534726438
+      }
+    ],
+    "region": [
+      {
+        "group": "Scotland",
+        "n": 3040,
+        "positives": 1353,
+        "at_risk_rate": 0.4450657894736842,
+        "selection_rate_top20": 0.22894736842105262,
+        "recall_top20": 0.4818920916481892,
+        "roc_auc": 0.8443674532127118,
+        "pr_auc": 0.8488949985336847
+      },
+      {
+        "group": "East Anglian Region",
+        "n": 2691,
+        "positives": 1055,
+        "at_risk_rate": 0.3920475659606094,
+        "selection_rate_top20": 0.17205499814195466,
+        "recall_top20": 0.38293838862559243,
+        "roc_auc": 0.8142614630528743,
+        "pr_auc": 0.7780460778917736
+      },
+      {
+        "group": "South Region",
+        "n": 2514,
+        "positives": 894,
+        "at_risk_rate": 0.3556085918854415,
+        "selection_rate_top20": 0.16268894192521877,
+        "recall_top20": 0.40492170022371365,
+        "roc_auc": 0.8320511227110781,
+        "pr_auc": 0.7793324756954373
+      },
+      {
+        "group": "London Region",
+        "n": 2483,
+        "positives": 1121,
+        "at_risk_rate": 0.4514699959726138,
+        "selection_rate_top20": 0.22714458316552558,
+        "recall_top20": 0.4469223907225691,
+        "roc_auc": 0.8341782366017335,
+        "pr_auc": 0.8256855365309903
+      },
+      {
+        "group": "North Western Region",
+        "n": 2209,
+        "positives": 1041,
+        "at_risk_rate": 0.4712539610683567,
+        "selection_rate_top20": 0.23766410140334993,
+        "recall_top20": 0.4668587896253602,
+        "roc_auc": 0.8484798764359875,
+        "pr_auc": 0.8529350655904682
+      },
+      {
+        "group": "West Midlands Region",
+        "n": 1991,
+        "positives": 873,
+        "at_risk_rate": 0.4384731290808639,
+        "selection_rate_top20": 0.19437468608739328,
+        "recall_top20": 0.3928980526918671,
+        "roc_auc": 0.8064074900564953,
+        "pr_auc": 0.7976963952268351
+      },
+      {
+        "group": "South West Region",
+        "n": 1975,
+        "positives": 762,
+        "at_risk_rate": 0.3858227848101266,
+        "selection_rate_top20": 0.1868354430379747,
+        "recall_top20": 0.4330708661417323,
+        "roc_auc": 0.8502324987612326,
+        "pr_auc": 0.8094657971600582
+      },
+      {
+        "group": "East Midlands Region",
+        "n": 1836,
+        "positives": 755,
+        "at_risk_rate": 0.41122004357298475,
+        "selection_rate_top20": 0.18137254901960784,
+        "recall_top20": 0.3933774834437086,
+        "roc_auc": 0.8201395568243778,
+        "pr_auc": 0.7936913088963884
+      },
+      {
+        "group": "Wales",
+        "n": 1829,
+        "positives": 887,
+        "at_risk_rate": 0.48496446145434663,
+        "selection_rate_top20": 0.25751776927282666,
+        "recall_top20": 0.48703494926719276,
+        "roc_auc": 0.8476005141498933,
+        "pr_auc": 0.8618069131291919
+      },
+      {
+        "group": "South East Region",
+        "n": 1692,
+        "positives": 605,
+        "at_risk_rate": 0.35756501182033096,
+        "selection_rate_top20": 0.16016548463356975,
+        "recall_top20": 0.39008264462809916,
+        "roc_auc": 0.8315577790111537,
+        "pr_auc": 0.7702726492261829
+      },
+      {
+        "group": "Yorkshire Region",
+        "n": 1559,
+        "positives": 659,
+        "at_risk_rate": 0.4227068633739577,
+        "selection_rate_top20": 0.20012828736369467,
+        "recall_top20": 0.4294385432473445,
+        "roc_auc": 0.8546189512729725,
+        "pr_auc": 0.8375671875039119
+      },
+      {
+        "group": "North Region",
+        "n": 1473,
+        "positives": 552,
+        "at_risk_rate": 0.37474541751527496,
+        "selection_rate_top20": 0.19416157501697218,
+        "recall_top20": 0.4528985507246377,
+        "roc_auc": 0.8293678893452296,
+        "pr_auc": 0.7914974344068432
+      },
+      {
+        "group": "Ireland",
+        "n": 1069,
+        "positives": 419,
+        "at_risk_rate": 0.39195509822263797,
+        "selection_rate_top20": 0.17492984097287184,
+        "recall_top20": 0.40572792362768495,
+        "roc_auc": 0.8199632825408482,
+        "pr_auc": 0.7928399533632348
+      }
+    ],
+    "highest_education": [
+      {
+        "group": "A Level or Equivalent",
+        "n": 11590,
+        "positives": 4282,
+        "at_risk_rate": 0.3694564279551337,
+        "selection_rate_top20": 0.17765314926660913,
+        "recall_top20": 0.42153199439514244,
+        "roc_auc": 0.8294051364311394,
+        "pr_auc": 0.7839480104373331
+      },
+      {
+        "group": "Lower Than A Level",
+        "n": 10241,
+        "positives": 5129,
+        "at_risk_rate": 0.5008299970705986,
+        "selection_rate_top20": 0.24108973733033884,
+        "recall_top20": 0.44628582569701697,
+        "roc_auc": 0.8331548780126874,
+        "pr_auc": 0.8549267749475601
+      },
+      {
+        "group": "HE Qualification",
+        "n": 4010,
+        "positives": 1353,
+        "at_risk_rate": 0.3374064837905237,
+        "selection_rate_top20": 0.15835411471321695,
+        "recall_top20": 0.4087213599408721,
+        "roc_auc": 0.8372604015498533,
+        "pr_auc": 0.7698984973255768
+      },
+      {
+        "group": "Post Graduate Qualification",
+        "n": 277,
+        "positives": 72,
+        "at_risk_rate": 0.259927797833935,
+        "selection_rate_top20": 0.11552346570397112,
+        "recall_top20": 0.3333333333333333,
+        "roc_auc": 0.7983062330623305,
+        "pr_auc": 0.6309961212791441
+      },
+      {
+        "group": "No Formal quals",
+        "n": 243,
+        "positives": 140,
+        "at_risk_rate": 0.5761316872427984,
+        "selection_rate_top20": 0.32098765432098764,
+        "recall_top20": 0.5357142857142857,
+        "roc_auc": 0.8361303744798891,
+        "pr_auc": 0.8921530269417901
+      }
+    ]
+  },
+  "gaps": {
+    "gender": {
+      "selection_rate_gap": 0.05664863444788429,
+      "recall_gap": 0.10033393912833172
+    },
+    "disability": {
+      "selection_rate_gap": 0.05993299658777343,
+      "recall_gap": 0.026804823207989104
+    },
+    "age_band": {
+      "selection_rate_gap": 0.11696245328904444,
+      "recall_gap": 0.1491452079392998
+    },
+    "imd_band": {
+      "selection_rate_gap": 0.13205619159110302,
+      "recall_gap": 0.06744530939665005
+    },
+    "region": {
+      "selection_rate_gap": 0.09735228463925691,
+      "recall_gap": 0.10409656064160033
+    },
+    "highest_education": {
+      "selection_rate_gap": 0.2054641886170165,
+      "recall_gap": 0.20238095238095238
+    }
+  },
+  "note": "Protected attributes are used only for this audit and are not model inputs. Groups with fewer than 100 active enrolments are omitted."
+}
