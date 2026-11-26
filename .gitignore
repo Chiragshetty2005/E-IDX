@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Local datasets (download OULAD separately; large files are never committed)
+mp_data/
+
+# Generated ML data (rebuild with `python -m ml.build_features`)
+ml/data/oulad.duckdb
+ml/data/duckdb_tmp/
+ml/data/*.parquet
+
+# Generated prediction tables (model artifacts and reports are kept)
+ml/artifacts/predictions.parquet
+ml/artifacts/temporal_predictions.parquet
+ml/artifacts/shap_values.parquet
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.log
