@@ -8,6 +8,7 @@ import {
   List,
   Scan,
   ShieldCheck,
+  SignOut,
   SquaresFour,
   UsersThree,
   X,
@@ -101,6 +102,28 @@ function RoleSwitcher({ id, onSwitch }: { id: string; onSwitch?: () => void }) {
   )
 }
 
+function SignOutButton({ onDone }: { onDone?: () => void }) {
+  const { signOut, switching } = useSession()
+  const navigate = useNavigate()
+
+  return (
+    <button
+      type="button"
+      disabled={switching}
+      onClick={() => {
+        void signOut().then(() => {
+          onDone?.()
+          navigate('/signin', { replace: true })
+        })
+      }}
+      className="mt-3 flex w-full items-center gap-2 rounded-lg border border-paper-200 px-3 py-2 caption-3 text-ink-700 transition-colors duration-300 hover:border-ink-400 hover:bg-paper-100 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      <SignOut size={16} weight="bold" />
+      Sign out
+    </button>
+  )
+}
+
 function UserPanel({ idPrefix }: { idPrefix: string }) {
   const { user } = useSession()
   return (
@@ -117,6 +140,7 @@ function UserPanel({ idPrefix }: { idPrefix: string }) {
       <div className="mt-3">
         <RoleSwitcher id={`${idPrefix}-role`} />
       </div>
+      <SignOutButton />
     </div>
   )
 }
@@ -299,6 +323,7 @@ function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
             <div className="mt-3">
               <RoleSwitcher id="mobile-role" onSwitch={onClose} />
             </div>
+            <SignOutButton onDone={onClose} />
           </div>
         </div>
       </div>
@@ -320,8 +345,8 @@ function FooterNote() {
 
   return (
     <p className="rule pt-4 caption-5 text-ink-500">
-      E-IDX frontend preview. The campus API is not reachable, so these screens use sample data and
-      are not connected to a card or server.
+      E-IDX frontend preview. These screens use the sample register and are not connected to a card
+      or a server.
     </p>
   )
 }

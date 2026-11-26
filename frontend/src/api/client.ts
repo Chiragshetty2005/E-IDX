@@ -24,6 +24,16 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Called when the API rejects the session. The session provider uses it to
+ * send the person back to the sign-in page instead of leaving stale screens.
+ */
+let unauthorizedHandler: (() => void) | null = null
+
+export function setUnauthorizedHandler(handler: (() => void) | null): void {
+  unauthorizedHandler = handler
+}
+
 interface RequestOptions {
   method?: 'GET' | 'POST'
   body?: unknown
@@ -64,6 +74,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 
     if (!response.ok) {
       const error = (payload as { error?: { code?: string; message?: string } } | null)?.error
+      if (response.status === 401) unauthorizedHandler?.()
       throw new ApiError(
         response.status,
         error?.code ?? 'request_failed',
@@ -94,7 +105,9 @@ export function isUnauthorized(error: unknown): boolean {
 }
 
 export function getSession(): Promise<SessionDto> {
-  return api<SessionDto>('/auth/session')
+  // A short timeout: the sign-in page should appear quickly when the API is
+  // down, so the person is not left waiting on a silent request.
+  return api<SessionDto>('/auth/session', { timeoutMs: 5_000 })
 }
 
 export function previewLogin(role: Role, usn?: string): Promise<SessionDto> {
