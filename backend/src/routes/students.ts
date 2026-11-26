@@ -344,7 +344,3 @@ export async function studentsRoutes(app: FastifyInstance): Promise<void> {
     },
   )
 }
-
-export function staffRoles(): Role[] {
-  return ['admin', 'faculty']
-}

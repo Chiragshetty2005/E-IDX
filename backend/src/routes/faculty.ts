@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 
 import { query, withStaffScope } from '../db.js'
+import { getStudentPredictions } from '../lib/risk.js'
 import { badRequest, notFound } from '../plugins/errors.js'
 import type { AuthUser } from '../types/fastify.js'
 
@@ -128,7 +129,6 @@ export async function facultyRoutes(app: FastifyInstance): Promise<void> {
       [row.id],
     )
 
-    const { getStudentPredictions } = await import('../lib/risk.js')
     const predictions = await getStudentPredictions(usn)
 
     return {
