@@ -330,6 +330,10 @@ def build_feature_tables(con: duckdb.DuckDBPyConnection) -> None:
                 sv.sum_click,
                 vl.activity_type
             FROM studentVle AS sv
+            JOIN cohort AS c
+                ON sv.code_module = c.code_module
+               AND sv.code_presentation = c.code_presentation
+               AND sv.id_student = c.id_student
             LEFT JOIN vle AS vl
                 ON sv.id_site = vl.id_site
                AND sv.code_module = vl.code_module
@@ -568,9 +572,11 @@ def main() -> int:
     con.execute(f"SET temp_directory='{DATA_DIR / 'duckdb_tmp'}'")
 
     try:
-        if args.rebuild_db or not DB_PATH.exists() or not con.execute(
-            "SELECT count(*) FROM information_schema.tables WHERE table_name = 'studentVle'"
-        ).fetchone()[0]:
+        tables_ready = con.execute(
+            "SELECT count(*) FROM information_schema.tables "
+            "WHERE table_name IN ('studentVle', 'studentInfo', 'assessments')"
+        ).fetchone()[0]
+        if args.rebuild_db or tables_ready != 3:
             import_tables(con)
         else:
             log("Reusing existing DuckDB tables")

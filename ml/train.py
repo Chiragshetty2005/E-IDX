@@ -56,15 +56,19 @@ from ml.config import (
     CATEGORICAL_FEATURES,
     COHORT_META_PATH,
     CUTOFF_DAY,
+    DATA_DIR,
     FEATURES_PATH,
     FEATURE_COLUMNS,
     FEATURE_GROUPS,
+    FEATURE_LABELS,
     FEATURE_META_PATH,
     ID_COLUMNS,
+    MODEL_CARD_PATH,
     NEEDS_SUPPORT_QUANTILE,
     N_SPLITS,
     NUMERIC_FEATURES,
     RANDOM_SEED,
+    RISK_TIERS,
     TARGET,
     TEMPORAL_TEST_PRESENTATION,
     WATCH_QUANTILE,
@@ -81,14 +85,17 @@ CATBOOST_PARAMS = {
     "loss_function": "Logloss",
     "eval_metric": "AUC",
     "random_seed": RANDOM_SEED,
-    "thread_count": 4,
+    # Single-threaded training keeps CatBoost bit-for-bit reproducible.
+    # Multi-threaded fitting changes the floating-point summation order and
+    # silently moves the reported metrics between runs.
+    "thread_count": 1,
     "verbose": 0,
     "allow_writing_files": False,
     "task_type": "CPU",
 }
 
 RISK_TIER_LABELS = {
-    "high": "needs-support",
+    "high": "support",
     "watch": "watch",
     "low": "on-track",
 }
@@ -270,11 +277,13 @@ def fold_metrics_summary(fold_metrics: list[dict]) -> dict:
 
 def run_grouped_cv(
     df: pd.DataFrame, folds: np.ndarray
-) -> tuple[dict, dict, np.ndarray, np.ndarray]:
+) -> tuple[dict, dict, np.ndarray]:
     X = df[FEATURE_COLUMNS]
     y = df[TARGET].to_numpy()
     oof_catboost = np.full(len(df), np.nan, dtype=float)
     oof_logistic = np.full(len(df), np.nan, dtype=float)
+    oof_shap = np.zeros((len(df), len(FEATURE_COLUMNS)), dtype=float)
+    shap_base_values: list[float] = []
     metrics = {"catboost": [], "logistic": []}
 
     for fold in range(N_SPLITS):
@@ -303,6 +312,17 @@ def run_grouped_cv(
             f"time={time.time() - start:.1f}s"
         )
 
+        # Out-of-fold SHAP: each validation row is explained by the fold model
+        # that never saw it, so the global explanation is not in-sample.
+        explainer = shap.TreeExplainer(catboost)
+        fold_shap = explainer.shap_values(X_valid)
+        if isinstance(fold_shap, list):
+            fold_shap = fold_shap[1]
+        oof_shap[valid_idx] = np.asarray(fold_shap)
+        shap_base_values.append(
+            float(np.asarray(explainer.expected_value).ravel()[0])
+        )
+
         start = time.time()
         logistic = make_logistic()
         logistic.fit(X_train, y_train)
@@ -320,7 +340,7 @@ def run_grouped_cv(
     return metrics, {
         "catboost": oof_catboost,
         "logistic": oof_logistic,
-    }, None, None
+    }, oof_shap, np.asarray(shap_base_values, dtype=float)
 
 
 def run_temporal_holdout(df: pd.DataFrame) -> dict:
@@ -406,25 +426,22 @@ def save_calibration_plot(
     plt.close()
 
 
-def compute_shap(
-    model: CatBoostClassifier, df: pd.DataFrame, sample_size: int = 2000
+def summarize_oof_shap(
+    df: pd.DataFrame,
+    oof_shap: np.ndarray,
+    base_values: np.ndarray,
+    sample_size: int = 2000,
 ) -> dict:
-    sample_size = min(sample_size, len(df))
-    sample = df.sample(n=sample_size, random_state=RANDOM_SEED)
-    X_sample = sample[FEATURE_COLUMNS].copy()
+    """Summarise explanations computed strictly out of fold.
 
-    log(f"Calculating SHAP values for {sample_size:,} rows ...")
-    start = time.time()
-    explainer = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(X_sample)
-    if isinstance(shap_values, list):
-        shap_values = shap_values[1]
-    shap_values = np.asarray(shap_values)
-    if shap_values.ndim != 2:
-        raise ValueError(f"Unexpected SHAP shape: {shap_values.shape}")
-    log(f"  SHAP finished in {time.time() - start:.1f}s")
+    Every row was explained by a fold model that never trained on it, so the
+    global driver ranking is not an in-sample artefact.
+    """
+    if oof_shap.shape != (len(df), len(FEATURE_COLUMNS)):
+        raise ValueError(f"Unexpected OOF SHAP shape: {oof_shap.shape}")
 
-    shap_df = pd.DataFrame(shap_values, columns=FEATURE_COLUMNS)
+    log("Summarising out-of-fold SHAP values ...")
+    shap_df = pd.DataFrame(oof_shap, columns=FEATURE_COLUMNS)
     mean_abs = shap_df.abs().mean().sort_values(ascending=False)
     mean_abs.rename("mean_abs_shap").to_csv(ARTIFACTS_DIR / "shap_importance.csv")
 
@@ -444,20 +461,34 @@ def compute_shap(
     group_share = (group_importance / group_importance.sum()).rename("share")
     group_share.to_csv(ARTIFACTS_DIR / "shap_group_importance.csv")
 
-    shap_out = pd.DataFrame(
-        shap_values,
-        columns=[f"shap__{column}" for column in FEATURE_COLUMNS],
+    # Keep the full out-of-fold explanation matrix for downstream driver
+    # generation. It is a generated file and is not committed.
+    full_out = pd.concat(
+        [
+            df[ID_COLUMNS + [TARGET]].reset_index(drop=True),
+            shap_df.add_prefix("shap__"),
+        ],
+        axis=1,
     )
-    meta = sample[ID_COLUMNS + [TARGET]].reset_index(drop=True)
+    full_out.to_parquet(DATA_DIR / "oof_shap_values.parquet", index=False)
+
+    sample_size = min(sample_size, len(df))
+    sample_idx = df.sample(n=sample_size, random_state=RANDOM_SEED).index
+    shap_out = pd.DataFrame(
+        oof_shap[sample_idx],
+        columns=[f"shap__{column}" for column in FEATURE_COLUMNS],
+    ).reset_index(drop=True)
+    meta = df.loc[sample_idx, ID_COLUMNS + [TARGET]].reset_index(drop=True)
     shap_out = pd.concat([meta, shap_out], axis=1)
     shap_out.to_parquet(ARTIFACTS_DIR / "shap_values.parquet", index=False)
 
     # SHAP's summary plot needs numeric colour values; encode the single
     # categorical feature for display only.
-    X_plot = X_sample.copy()
+    X_plot = df.loc[sample_idx, FEATURE_COLUMNS].copy()
     for column in CATEGORICAL_FEATURES:
         if column in X_plot.columns:
             X_plot[column] = X_plot[column].astype("category").cat.codes
+    shap_values = oof_shap[sample_idx]
 
     plt.figure()
     shap.summary_plot(
@@ -485,10 +516,16 @@ def compute_shap(
     plt.close()
 
     return {
-        "sample_rows": int(sample_size),
-        "expected_value": float(np.asarray(explainer.expected_value).ravel()[0]),
+        "basis": "out-of-fold validation rows (no row explained by a model that trained on it)",
+        "rows_explained": int(len(df)),
+        "sample_rows_saved": int(sample_size),
+        "mean_base_value": float(np.mean(base_values)),
         "top_features": [
-            {"feature": feature, "mean_abs_shap": float(value)}
+            {
+                "feature": feature,
+                "label": FEATURE_LABELS.get(feature, feature),
+                "mean_abs_shap": float(value),
+            }
             for feature, value in mean_abs.head(20).items()
         ],
         "group_importance": [
@@ -596,6 +633,153 @@ def compute_fairness(df: pd.DataFrame, oof_probability: np.ndarray) -> dict:
     return result
 
 
+def write_model_card(metrics: dict, shap_summary: dict, fairness: dict) -> None:
+    """Render a human-readable model card from the run that just finished."""
+    cat = metrics["cross_validation"]["catboost"]["overall_oof"]
+    log_cv = metrics["cross_validation"]["logistic"]["overall_oof"]
+    temporal = metrics["temporal_holdout"]
+    tiers = metrics["risk_tiers"]
+    dataset = metrics["dataset"]
+
+    group_rows = "\n".join(
+        f"| {row['group']} | {row['share'] * 100:.1f}% |"
+        for row in shap_summary["group_importance"]
+    )
+    feature_rows = "\n".join(
+        f"| {row['label']} | `{row['feature']}` | {row['mean_abs_shap']:.4f} |"
+        for row in shap_summary["top_features"][:12]
+    )
+    fairness_rows = "\n".join(
+        f"| {attribute} | {gap['selection_rate_gap']:.3f} | "
+        f"{gap['recall_gap']:.3f} |"
+        for attribute, gap in fairness.get("gaps", {}).items()
+    ) or "| _not available_ | | |"
+
+    card = f"""# E-IDX academic risk model card
+
+**Model:** CatBoost binary classifier
+**Version:** `{metrics['model_version']}`
+**Trained:** {metrics['created_at_utc']}
+**Status:** research / capstone validation model, not a production deployment
+
+## Intended use
+
+Rank active students by the likelihood of failing or withdrawing from a module, so a
+mentor can offer support earlier. The output is decision support for staff. It is never
+an automatic sanction and never reaches the student card or the student-facing app.
+
+## Out-of-scope use
+
+- Predicting a sanction, detention, grade, fee decision or attendance verdict.
+- Scoring students who already left the module before the cutoff.
+- Ranking staff, departments or institutions.
+- Any use of protected attributes as model inputs.
+
+## Data and target
+
+| Item | Value |
+| --- | --- |
+| Dataset | OULAD (Kuzilek et al., 2017), CC BY 4.0 |
+| Unit of prediction | Student-module enrolment |
+| Target | `at_risk = final_result in {{Fail, Withdrawn}}` |
+| Cutoff | Day {CUTOFF_DAY} of the presentation |
+| Cohort | Still enrolled at the cutoff; {dataset.get('stored_feature_meta', {}).get('early_unregistered', 0):,} earlier withdrawals excluded |
+| Training rows | {dataset['rows']:,} |
+| Unique students | {dataset['students']:,} |
+| At-risk rate | {dataset['at_risk_rate'] * 100:.2f}% |
+| Features | {metrics['model_contract']['feature_count']} |
+
+## Validation
+
+Five-fold validation grouped by student, so no student appears in both training and
+validation. The temporal holdout trains on earlier presentations and tests on 2014J with
+every overlapping student removed from training.
+
+| Metric | CatBoost (grouped CV) | Logistic baseline | CatBoost (2014J holdout) |
+| --- | ---: | ---: | ---: |
+| ROC-AUC | {cat['roc_auc']:.4f} | {log_cv['roc_auc']:.4f} | {temporal['catboost']['roc_auc']:.4f} |
+| PR-AUC | {cat['pr_auc']:.4f} | {log_cv['pr_auc']:.4f} | {temporal['catboost']['pr_auc']:.4f} |
+| Brier score | {cat['brier']:.4f} | {log_cv['brier']:.4f} | {temporal['catboost']['brier']:.4f} |
+| Calibration error (10 bins) | {cat['ece_10bin']:.4f} | {log_cv['ece_10bin']:.4f} | {temporal['catboost']['ece_10bin']:.4f} |
+| Recall at top 10% | {cat['recall_at_10pct']:.4f} | {log_cv['recall_at_10pct']:.4f} | {temporal['catboost']['recall_at_10pct']:.4f} |
+| Precision at top 10% | {cat['precision_at_10pct']:.4f} | {log_cv['precision_at_10pct']:.4f} | {temporal['catboost']['precision_at_10pct']:.4f} |
+| Recall at top 20% | {cat['recall_at_20pct']:.4f} | {log_cv['recall_at_20pct']:.4f} | {temporal['catboost']['recall_at_20pct']:.4f} |
+| Precision at top 20% | {cat['precision_at_20pct']:.4f} | {log_cv['precision_at_20pct']:.4f} | {temporal['catboost']['precision_at_20pct']:.4f} |
+
+## Risk tiers
+
+Tiers are capacity-based quantiles of the out-of-fold probability, not a fixed 0.5 cut.
+
+| Tier | Rule | Threshold | Share |
+| --- | --- | ---: | ---: |
+| support | top 10% | >= {tiers['needs_support_threshold']:.4f} | {tiers['oof_tier_counts']['support']:,} |
+| watch | next 20% | >= {tiers['watch_threshold']:.4f} | {tiers['oof_tier_counts']['watch']:,} |
+| on-track | remainder | below {tiers['watch_threshold']:.4f} | {tiers['oof_tier_counts']['on-track']:,} |
+
+## What drives the model
+
+Global drivers are computed from out-of-fold explanations, so no row is explained by a
+model that trained on it.
+
+| Group | Share of mean absolute SHAP |
+| --- | ---: |
+{group_rows}
+
+| Label | Feature | Mean absolute SHAP |
+| --- | --- | ---: |
+{feature_rows}
+
+## Fairness audit
+
+Protected attributes are excluded from the model and used only for this audit. The table
+reports the gap between the best and worst subgroup at the global top-20% selection rate.
+
+| Attribute | Selection-rate gap | Recall gap |
+| --- | ---: | ---: |
+{fairness_rows}
+
+The largest observed gap is a known limitation of this validation run and must be
+reviewed before any production deployment.
+
+## Known limitations
+
+- The 2014J temporal holdout is the honest estimate; performance drops by roughly
+  {abs(cat['roc_auc'] - temporal['catboost']['roc_auc']):.3f} ROC-AUC against grouped CV.
+- OULAD has no physical attendance, SGPA trend, fee status or campus-card tap data, so
+  none of those appear as model drivers.
+- At-risk combines two different outcomes, fail and withdrawal. A later model should
+  separate them.
+- Around {dataset.get('stored_feature_meta', {}).get('no_assessment_rows', 0):,} active enrolments
+  have no scored assessment at the cutoff and rely mainly on VLE engagement.
+- Risk is a module-level signal; a student enrolled in several modules needs an explicit
+  aggregation rule at serving time.
+
+## Privacy invariants
+
+1. Risk probability, tier and drivers never appear on the student card, in a signed pass,
+   in `/me/*` responses or in card-update payloads.
+2. Raw VLE click rows are never stored in the application database; only aggregated
+   feature snapshots and the latest prediction are.
+3. Staff access to risk explanations is role-scoped and auditable.
+
+## Reproduction
+
+```bash
+uv venv ml/.venv --python 3.12
+uv pip install --python ml/.venv/bin/python -r ml/requirements.txt
+ml/.venv/bin/python -m ml.build_features --rebuild-db
+ml/.venv/bin/python -m ml.train
+ml/.venv/bin/python -m ml.verify
+```
+
+## Citation
+
+Kuzilek, J., Hachimaru, M. and Brophy, J. (2017). Open University Learning Analytics
+Dataset. *Scientific Data*, 4, 170171. https://doi.org/10.1038/sdata.2017.171
+"""
+    MODEL_CARD_PATH.write_text(card, encoding="utf-8")
+
+
 def main() -> int:
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     df = load_data()
@@ -607,7 +791,7 @@ def main() -> int:
     )
 
     folds = make_folds(df)
-    cv_metrics, oof, _, _ = run_grouped_cv(df, folds)
+    cv_metrics, oof, oof_shap, shap_base_values = run_grouped_cv(df, folds)
     y = df[TARGET].to_numpy()
     oof_catboost = oof["catboost"]
     oof_logistic = oof["logistic"]
@@ -658,9 +842,9 @@ def main() -> int:
     watch_threshold = float(np.quantile(oof_catboost, WATCH_QUANTILE))
 
     def risk_tier(probability: np.ndarray) -> np.ndarray:
-        tiers = np.full(len(probability), "low", dtype=object)
+        tiers = np.full(len(probability), "on-track", dtype=object)
         tiers[probability >= watch_threshold] = "watch"
-        tiers[probability >= needs_support_threshold] = "high"
+        tiers[probability >= needs_support_threshold] = "support"
         return tiers
 
     predictions = df[ID_COLUMNS + [TARGET]].copy()
@@ -676,10 +860,15 @@ def main() -> int:
     feature_importance.to_csv(ARTIFACTS_DIR / "feature_importance.csv", index=False)
 
     save_calibration_plot(y, oof_catboost, ARTIFACTS_DIR / "calibration.png")
-    shap_summary = compute_shap(final_catboost, df)
+    shap_summary = summarize_oof_shap(df, oof_shap, shap_base_values)
 
     risk_tier_counts = (
-        predictions["final_risk_tier"].value_counts().reindex(["high", "watch", "low"]).fillna(0).astype(int).to_dict()
+        predictions["final_risk_tier"]
+        .value_counts()
+        .reindex(list(RISK_TIERS))
+        .fillna(0)
+        .astype(int)
+        .to_dict()
     )
 
     model_version = (
@@ -733,9 +922,9 @@ def main() -> int:
             "needs_support_quantile": NEEDS_SUPPORT_QUANTILE,
             "watch_quantile": WATCH_QUANTILE,
             "oof_tier_counts": {
-                "high": int((predictions["oof_risk_tier"] == "high").sum()),
+                "support": int((predictions["oof_risk_tier"] == "support").sum()),
                 "watch": int((predictions["oof_risk_tier"] == "watch").sum()),
-                "low": int((predictions["oof_risk_tier"] == "low").sum()),
+                "on-track": int((predictions["oof_risk_tier"] == "on-track").sum()),
             },
             "final_tier_counts": risk_tier_counts,
         },
@@ -754,6 +943,7 @@ def main() -> int:
     (ARTIFACTS_DIR / "metrics.json").write_text(
         json.dumps(metrics, indent=2), encoding="utf-8"
     )
+    write_model_card(metrics, shap_summary, fairness)
     if FEATURE_META_PATH.exists():
         (ARTIFACTS_DIR / "feature_meta.json").write_text(
             FEATURE_META_PATH.read_text(encoding="utf-8"), encoding="utf-8"
@@ -817,9 +1007,9 @@ def main() -> int:
     )
     print(
         "  Risk tiers: "
-        f"high={risk_tier_counts['high']:,}, "
+        f"support={risk_tier_counts['support']:,}, "
         f"watch={risk_tier_counts['watch']:,}, "
-        f"low={risk_tier_counts['low']:,}"
+        f"on-track={risk_tier_counts['on-track']:,}"
     )
     print(f"  Artifacts written to {ARTIFACTS_DIR}")
     return 0
