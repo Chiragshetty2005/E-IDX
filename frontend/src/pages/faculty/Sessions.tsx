@@ -4,7 +4,12 @@ import { PageHeader, SectionHead } from '../../components/PageHeader'
 import { Button } from '../../components/Button'
 import { Pill } from '../../components/Status'
 import { EmptyState } from '../../components/EmptyState'
-import { liveTaps, sessions, students } from '../../data/mock'
+import { DataNotice } from '../../components/DataNotice'
+import { errorMessage } from '../../api/client'
+import { endpoints } from '../../api/endpoints'
+import { useSessions } from '../../data/hooks'
+import { useSession } from '../../session'
+import { liveTaps, students } from '../../data/mock'
 
 interface Tap {
   name: string
@@ -13,6 +18,9 @@ interface Tap {
 }
 
 export function FacultySessions() {
+  const { isLive } = useSession()
+  const { data: sessionRows, loading, error, refresh } = useSessions()
+
   const [openId, setOpenId] = useState<string | null>('S-442')
   const [closedIds, setClosedIds] = useState<string[]>(['S-441'])
   const [counts, setCounts] = useState<Record<string, number>>({
@@ -21,15 +29,49 @@ export function FacultySessions() {
   })
   const [taps, setTaps] = useState<Tap[]>(liveTaps)
   const [tapIndex, setTapIndex] = useState(0)
+  const [simulated, setSimulated] = useState(0)
+  const [actionError, setActionError] = useState<string | null>(null)
 
-  const openSession = sessions.find((session) => session.id === openId) ?? null
-  const present = openId ? counts[openId] ?? 0 : 0
-  const rate = openSession ? (present / openSession.total) * 100 : 0
-  const nextSession = sessions.find(
-    (session) => session.id !== openId && !closedIds.includes(session.id),
-  )
+  // In live mode the server owns the session state. The preview keeps the
+  // original local simulation.
+  const openSession = isLive
+    ? (sessionRows.find((session) => session.status === 'open') ?? null)
+    : (sessionRows.find((session) => session.id === openId) ?? null)
 
-  const open = (id: string) => {
+  const present = isLive
+    ? (openSession?.present ?? 0) + simulated
+    : openId
+      ? counts[openId] ?? 0
+      : 0
+  const rate = openSession && openSession.total > 0 ? (present / openSession.total) * 100 : 0
+
+  const nextSession = isLive
+    ? (sessionRows.find((session) => session.status === 'upcoming') ?? null)
+    : (sessionRows.find(
+        (session) => session.id !== openId && !closedIds.includes(session.id),
+      ) ?? null)
+
+  const statusFor = (id: string) => {
+    if (isLive) {
+      return sessionRows.find((session) => session.id === id)?.status ?? 'upcoming'
+    }
+    if (id === openId) return 'open'
+    if (closedIds.includes(id)) return 'closed'
+    return 'upcoming'
+  }
+
+  const open = async (id: string) => {
+    setActionError(null)
+    if (isLive) {
+      try {
+        await endpoints.openSession(id)
+        refresh()
+      } catch (cause) {
+        setActionError(errorMessage(cause))
+      }
+      return
+    }
+
     setClosedIds((previous) => {
       const withClosed = openId ? [...previous, openId] : previous
       return withClosed.filter((item) => item !== id)
@@ -39,7 +81,20 @@ export function FacultySessions() {
     setTaps([])
   }
 
-  const close = () => {
+  const close = async () => {
+    setActionError(null)
+    if (isLive) {
+      if (!openSession) return
+      try {
+        await endpoints.closeSession(openSession.id)
+        setSimulated(0)
+        refresh()
+      } catch (cause) {
+        setActionError(errorMessage(cause))
+      }
+      return
+    }
+
     if (!openId) return
     setClosedIds((previous) => [...previous, openId])
     setOpenId(null)
@@ -61,21 +116,22 @@ export function FacultySessions() {
     ]
       .map((value) => String(value).padStart(2, '0'))
       .join(':')
-    setTaps((previous) =>
-      [{ name: candidate.name, usn: candidate.usn, time }, ...previous].slice(0, 8),
+    setTaps(
+      (previous) =>
+        [{ name: candidate.name, usn: candidate.usn, time }, ...previous].slice(0, 8),
     )
     setTapIndex((index) => index + 1)
-    setCounts((previous) => ({
-      ...previous,
-      [openSession.id]: Math.min(openSession.total, (previous[openSession.id] ?? 0) + 1),
-    }))
+    if (isLive) {
+      setSimulated((value) => value + 1)
+    } else {
+      setCounts((previous) => ({
+        ...previous,
+        [openSession.id]: Math.min(openSession.total, (previous[openSession.id] ?? 0) + 1),
+      }))
+    }
   }
 
-  const statusFor = (id: string) => {
-    if (id === openId) return 'open'
-    if (closedIds.includes(id)) return 'closed'
-    return 'upcoming'
-  }
+  const cohortSize = sessionRows[0]?.total ?? 62
 
   return (
     <div>
@@ -84,13 +140,13 @@ export function FacultySessions() {
         description="Open a session and taps from the class are written to attendance."
         meta={
           <>
-            <span className="caption-4 text-ink-500">Sunday, 22 November 2026</span>
-            <span className="caption-4 text-ink-500">Section A, 62 students</span>
+            <span className="caption-4 text-ink-500">Today</span>
+            <span className="caption-4 text-ink-500">Section A, {cohortSize} students</span>
           </>
         }
       >
         {openSession ? (
-          <Button variant="secondary" size="sm" onClick={close}>
+          <Button variant="secondary" size="sm" onClick={() => void close()}>
             <X size={14} weight="bold" />
             Close session
           </Button>
@@ -98,12 +154,14 @@ export function FacultySessions() {
           <Button
             size="sm"
             disabled={!nextSession}
-            onClick={() => nextSession && open(nextSession.id)}
+            onClick={() => nextSession && void open(nextSession.id)}
           >
             Open next session
           </Button>
         )}
       </PageHeader>
+
+      <DataNotice loading={loading} error={error ?? actionError} />
 
       <div className="mt-8 grid gap-8 lg:grid-cols-12">
         <div className="min-w-0 space-y-8 lg:col-span-8">
@@ -142,7 +200,9 @@ export function FacultySessions() {
                   Simulate tap
                 </Button>
                 <p className="caption-5 text-ink-500">
-                  Test only. No reader hardware is connected in this preview.
+                  {isLive
+                    ? 'Simulated taps stay in this browser. A real reader writes attendance through the API.'
+                    : 'Test only. No reader hardware is connected in this preview.'}
                 </p>
               </div>
 
@@ -176,7 +236,7 @@ export function FacultySessions() {
               description="Open a session from the list to start logging taps. Only one session stays open at a time."
               action={
                 nextSession ? (
-                  <Button size="sm" onClick={() => open(nextSession.id)}>
+                  <Button size="sm" onClick={() => void open(nextSession.id)}>
                     Open {nextSession.code}
                   </Button>
                 ) : undefined
@@ -190,7 +250,7 @@ export function FacultySessions() {
               description="Opening a session starts a fifty minute attendance window."
             />
             <ul className="mt-2 divide-y divide-paper-200 sm:hidden">
-              {sessions.map((session) => {
+              {sessionRows.map((session) => {
                 const status = statusFor(session.id)
                 const count = counts[session.id]
                 return (
@@ -221,11 +281,11 @@ export function FacultySessions() {
                           : `${count ?? session.present} of ${session.total} present`}
                       </p>
                       {status === 'open' ? (
-                        <Button variant="secondary" size="sm" onClick={close}>
+                        <Button variant="secondary" size="sm" onClick={() => void close()}>
                           Close
                         </Button>
                       ) : status === 'upcoming' ? (
-                        <Button variant="secondary" size="sm" onClick={() => open(session.id)}>
+                        <Button variant="secondary" size="sm" onClick={() => void open(session.id)}>
                           Open
                         </Button>
                       ) : (
@@ -263,7 +323,7 @@ export function FacultySessions() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sessions.map((session) => {
+                  {sessionRows.map((session) => {
                     const status = statusFor(session.id)
                     const count = counts[session.id]
                     return (
@@ -305,11 +365,11 @@ export function FacultySessions() {
                         </td>
                         <td className="py-3 pl-4 text-right">
                           {status === 'open' ? (
-                            <Button variant="secondary" size="sm" onClick={close}>
+                            <Button variant="secondary" size="sm" onClick={() => void close()}>
                               Close
                             </Button>
                           ) : status === 'upcoming' ? (
-                            <Button variant="secondary" size="sm" onClick={() => open(session.id)}>
+                            <Button variant="secondary" size="sm" onClick={() => void open(session.id)}>
                               Open
                             </Button>
                           ) : (

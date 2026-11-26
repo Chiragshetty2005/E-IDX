@@ -6,20 +6,27 @@ import { QrPass } from '../../components/QrPass'
 import { CardStatusPill } from '../../components/Status'
 import { TrendChart } from '../../components/Charts'
 import { buttonStyles } from '../../components/Button'
-import { demoStudent, exams, loans } from '../../data/mock'
+import { DataNotice } from '../../components/DataNotice'
+import { useMe } from '../../data/hooks'
+import { useSession } from '../../session'
 
 export function StudentMyCard() {
+  const { isLive } = useSession()
+  const { data, loading, error } = useMe()
   const [view, setView] = useState<'identity' | 'services'>('identity')
-  const student = demoStudent
+
+  const student = data.student
   const attended = student.courses.reduce((sum, course) => sum + course.attended, 0)
   const held = student.courses.reduce((sum, course) => sum + course.held, 0)
-  const nextExam = exams[0]
+  const nextExam = data.exams[0]
+  const firstTerm = student.sgpa[0]
+  const lastTerm = student.sgpa[student.sgpa.length - 1]
 
   return (
     <div>
       <PageHeader
         title="Your card"
-        description="Your card is active and the last update reached it eight minutes ago."
+        description={`Your card is ${student.card.status === 'active' ? 'active' : 'under review'} and last synced ${student.card.lastSync.toLowerCase()}.`}
         meta={
           <>
             <span className="font-mono caption-4 text-ink-500">{student.usn}</span>
@@ -33,6 +40,8 @@ export function StudentMyCard() {
           All campus services
         </Link>
       </PageHeader>
+
+      <DataNotice loading={loading} error={error} />
 
       <div className="mt-8 grid gap-8 lg:grid-cols-12">
         <section className="min-w-0 lg:col-span-7">
@@ -81,7 +90,12 @@ export function StudentMyCard() {
         </section>
 
         <div className="min-w-0 lg:col-span-5">
-          <QrPass student={student} />
+          <QrPass usn={student.usn} />
+          {isLive ? (
+            <p className="mt-3 caption-5 text-ink-500">
+              The pass is signed by the API for your card. It carries no academic information.
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -108,19 +122,25 @@ export function StudentMyCard() {
           <div className="sm:px-6">
             <dt className="caption-5 text-ink-500">Library</dt>
             <dd className="mt-1 body-1">No dues</dd>
-            <p className="mt-1 caption-5 text-ink-500">{loans.length} books on loan</p>
+            <p className="mt-1 caption-5 text-ink-500">{data.loans.length} books on loan</p>
           </div>
           <div className="sm:px-6">
             <dt className="caption-5 text-ink-500">Next exam</dt>
-            <dd className="mt-1 font-mono heading-5">{nextExam.date.replace(' 2026', '')}</dd>
+            <dd className="mt-1 font-mono heading-5">
+              {nextExam ? nextExam.date.replace(/ \d{4}$/, '') : '—'}
+            </dd>
             <p className="mt-1 caption-5 text-ink-500">
-              {nextExam.time}, {nextExam.hall}
+              {nextExam ? `${nextExam.time}, ${nextExam.hall}` : 'No exam scheduled'}
             </p>
           </div>
           <div className="sm:pl-6">
             <dt className="caption-5 text-ink-500">Fees</dt>
-            <dd className="mt-1 body-1">Paid</dd>
-            <p className="mt-1 caption-5 text-ink-500">Semester VI, no dues</p>
+            <dd className="mt-1 body-1">
+              {data.receipts[0]?.status ?? 'No record'}
+            </dd>
+            <p className="mt-1 caption-5 text-ink-500">
+              {data.receipts[0] ? `${data.receipts[0].term}, no dues` : 'No receipt on file'}
+            </p>
           </div>
         </dl>
       </section>
@@ -149,7 +169,7 @@ export function StudentMyCard() {
               </thead>
               <tbody>
                 {student.courses.map((course) => {
-                  const rate = (course.attended / course.held) * 100
+                  const rate = course.held > 0 ? (course.attended / course.held) * 100 : 0
                   return (
                     <tr key={course.code} className="border-b border-paper-200 last:border-b-0">
                       <th scope="row" className="py-3 pr-4 text-left">
@@ -186,7 +206,7 @@ export function StudentMyCard() {
           <div className="mt-4 rounded-2xl bg-paper-100 p-4 sm:p-6">
             <TrendChart
               data={student.sgpa.map((term) => ({ label: term.term, value: term.value }))}
-              label={`SGPA moved from ${student.sgpa[0].value.toFixed(1)} in semester 1 to ${student.sgpa[5].value.toFixed(1)} in semester 6.`}
+              label={`SGPA moved from ${firstTerm?.value.toFixed(1) ?? '—'} in the first term to ${lastTerm?.value.toFixed(1) ?? '—'} in the latest term.`}
               min={4}
               max={10}
               suffix=""
@@ -198,8 +218,9 @@ export function StudentMyCard() {
       <section className="mt-10 rounded-2xl bg-paper-100 p-4 sm:p-6">
         <h2 className="heading-6">Academic support stays with your mentor</h2>
         <p className="mt-2 max-w-[680px] body-6 text-ink-700 text-pretty">
-          Support conversations are private to you and {student.mentor}. They never appear on your
-          card or change a grade. Office hours are Tuesday, 14:00 to 16:00, cabin B 312.
+          Support conversations are private to you and {student.mentor || 'your mentor'}. They never
+          appear on your card or change a grade. Office hours are Tuesday, 14:00 to 16:00, cabin B
+          312.
         </p>
       </section>
     </div>

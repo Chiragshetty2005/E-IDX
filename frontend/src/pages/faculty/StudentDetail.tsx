@@ -7,19 +7,43 @@ import { CardStatusPill, RiskPill } from '../../components/Status'
 import { ShapBars, TrendChart } from '../../components/Charts'
 import { EInkCard } from '../../components/EInkCard'
 import { EmptyState } from '../../components/EmptyState'
-import { modelInfo, shapFor, studentByUsn } from '../../data/mock'
+import { DataNotice } from '../../components/DataNotice'
+import { errorMessage } from '../../api/client'
+import { endpoints } from '../../api/endpoints'
+import { formatDate, noteToIntervention } from '../../api/adapters'
+import { useStudentSupport } from '../../data/hooks'
+import { useSession } from '../../session'
+import { modelInfo } from '../../data/mock'
 import { riskLabel } from '../../lib/ui'
 import type { Intervention } from '../../types'
 
 export function FacultyStudent() {
   const { usn } = useParams()
-  const student = usn ? studentByUsn.get(usn) : undefined
+  const { isLive, user } = useSession()
+  const { data, loading, error } = useStudentSupport(usn ?? null)
 
-  const [notes, setNotes] = useState<Intervention[]>(student?.interventions ?? [])
+  const [addedNotes, setAddedNotes] = useState<Intervention[]>([])
   const [noteText, setNoteText] = useState('')
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  const notes = [...addedNotes, ...(data?.notes ?? [])]
+  const student = data?.student ?? null
 
   if (!student) {
+    if (loading) {
+      return (
+        <div>
+          <Link to="/faculty" className="caption-1 text-link">
+            All students
+          </Link>
+          <p className="mt-8 caption-2 text-ink-500" role="status">
+            Loading the student record…
+          </p>
+        </div>
+      )
+    }
+
     return (
       <div>
         <Link to="/faculty" className="caption-1 text-link">
@@ -28,7 +52,7 @@ export function FacultyStudent() {
         <div className="mt-8">
           <EmptyState
             title="Student not found"
-            description="This USN is not in the sample register. Go back to the cohort and choose a student."
+            description="This USN is not in the register. Go back to the cohort and choose a student."
             action={
               <Link to="/faculty" className={buttonStyles('secondary', 'sm')}>
                 Back to cohort
@@ -47,19 +71,34 @@ export function FacultyStudent() {
         ? `${student.driver} The model places this student in the watch tier rather than the support group.`
         : `No concerns this term. ${student.driver}`
 
-  const saveNote = () => {
+  const saveNote = async () => {
     const text = noteText.trim()
-    if (!text) return
-    setNotes([
+    if (!text || !usn) return
+
+    if (isLive) {
+      try {
+        const response = await endpoints.addIntervention(usn, text)
+        setAddedNotes((previous) => [noteToIntervention(response.intervention), ...previous])
+        setNoteText('')
+        setSaved(true)
+        setSaveError(null)
+      } catch (cause) {
+        setSaveError(errorMessage(cause))
+      }
+      return
+    }
+
+    setAddedNotes((previous) => [
       {
-        date: '22 Nov 2026',
+        date: formatDate(new Date().toISOString()),
         note: text,
-        by: 'Dr. Shahin Fatima',
+        by: user.name,
       },
-      ...notes,
+      ...previous,
     ])
     setNoteText('')
     setSaved(true)
+    setSaveError(null)
   }
 
   return (
@@ -82,6 +121,8 @@ export function FacultyStudent() {
           <RiskPill risk={student.risk} />
         </PageHeader>
       </div>
+
+      <DataNotice loading={loading} error={error} />
 
       <section className="mt-8 border-y border-paper-200 py-4" aria-label="Academic record">
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:divide-x sm:divide-paper-200">
@@ -131,7 +172,7 @@ export function FacultyStudent() {
             <div className="mt-6">
               <h3 className="title-4 text-ink-700">Feature contributions</h3>
               <div className="mt-3">
-                <ShapBars features={shapFor(student)} />
+                <ShapBars features={data?.shap ?? []} />
               </div>
             </div>
 
@@ -165,7 +206,7 @@ export function FacultyStudent() {
                 </thead>
                 <tbody>
                   {student.courses.map((course) => {
-                    const rate = (course.attended / course.held) * 100
+                    const rate = course.held > 0 ? (course.attended / course.held) * 100 : 0
                     return (
                       <tr key={course.code} className="border-b border-paper-200 last:border-b-0">
                         <th scope="row" className="py-3 pr-4 text-left">
@@ -204,7 +245,7 @@ export function FacultyStudent() {
             <div className="mt-4 rounded-2xl bg-paper-100 p-4 sm:p-6">
               <TrendChart
                 data={student.sgpa.map((term) => ({ label: term.term, value: term.value }))}
-                label={`SGPA moved from ${student.sgpa[0].value.toFixed(1)} in semester 1 to ${student.sgpa[5].value.toFixed(1)} in semester 6.`}
+                label={`SGPA moved from ${student.sgpa[0]?.value.toFixed(1) ?? '—'} in the first term to ${student.sgpa[student.sgpa.length - 1]?.value.toFixed(1) ?? '—'} in the latest term.`}
                 min={4}
                 max={10}
                 suffix=""
@@ -262,18 +303,24 @@ export function FacultyStudent() {
                 onChange={(event) => {
                   setNoteText(event.target.value)
                   setSaved(false)
+                  setSaveError(null)
                 }}
                 placeholder="What did you discuss, and what happens next?"
                 className="w-full resize-y rounded-lg border border-paper-300 bg-paper-0 px-3 py-2 body-5 transition-colors duration-300 hover:border-ink-400 focus:border-ink-900"
               />
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <Button size="sm" onClick={saveNote} disabled={noteText.trim().length === 0}>
+                <Button size="sm" onClick={() => void saveNote()} disabled={noteText.trim().length === 0}>
                   Save note
                 </Button>
                 {saved ? (
                   <p className="flex items-center gap-1 caption-5 text-verified" role="status">
                     <CheckCircle size={14} weight="bold" />
                     Note saved for {student.name.split(' ')[0]}.
+                  </p>
+                ) : null}
+                {saveError ? (
+                  <p className="caption-5 text-critical" role="alert">
+                    {saveError}
                   </p>
                 ) : null}
               </div>

@@ -115,11 +115,11 @@ export function VerifyConsole() {
     <div>
       <PageHeader
         title="Verification console"
-        description="Run a QR or NFC check and see the decision returned by the backend."
+        description="Run a QR or NFC check and see how a reader decision is presented."
         meta={
           <>
             <span className="caption-4 text-ink-500">Reader GATE 01, Main gate</span>
-            <span className="caption-4 text-ink-500">Sunday, 22 November 2026</span>
+            <span className="caption-4 text-ink-500">Scripted test cases</span>
           </>
         }
       >
@@ -134,7 +134,8 @@ export function VerifyConsole() {
         <section className="lg:col-span-5">
           <h2 className="heading-6">Run a check</h2>
           <p className="mt-1 caption-2 text-ink-500">
-            Choose a method and a test case. The result arrives after a server round trip.
+            Choose a method and a test case. The result arrives after a short simulated round
+            trip.
           </p>
 
           <div className="mt-5 inline-flex rounded-lg bg-paper-100 p-1" role="tablist" aria-label="Verification method">
@@ -221,7 +222,8 @@ export function VerifyConsole() {
           </Button>
 
           <p className="mt-3 caption-5 text-ink-500">
-            These test cases simulate the backend. No reader hardware is connected in this preview.
+            These test cases are scripted on this screen. No reader hardware is connected, and real
+            decisions are recorded in the verification log.
           </p>
         </section>
 
@@ -268,7 +270,7 @@ export function VerifyConsole() {
                   ))}
                 </div>
                 <div className="mt-8 h-20 animate-pulse rounded-xl bg-paper-100" />
-                <p className="pt-2 caption-5 text-ink-500">Waiting for the backend decision.</p>
+                <p className="pt-2 caption-5 text-ink-500">Waiting for the simulated decision.</p>
               </div>
             ) : null}
 

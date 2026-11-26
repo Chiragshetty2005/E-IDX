@@ -2,12 +2,17 @@ import { Link } from 'react-router-dom'
 import { PageHeader, SectionHead } from '../../components/PageHeader'
 import { Pill } from '../../components/Status'
 import { buttonStyles } from '../../components/Button'
-import { demoStudent, exams, feeReceipts, loans } from '../../data/mock'
+import { DataNotice } from '../../components/DataNotice'
+import { useMe } from '../../data/hooks'
 
 export function StudentServices() {
-  const student = demoStudent
+  const { data, loading, error } = useMe()
+  const student = data.student
   const attended = student.courses.reduce((sum, course) => sum + course.attended, 0)
   const held = student.courses.reduce((sum, course) => sum + course.held, 0)
+  const exams = data.exams
+  const feeReceipts = data.receipts
+  const loans = data.loans
 
   return (
     <div>
@@ -16,7 +21,7 @@ export function StudentServices() {
         description="Attendance, library, exams and fees from the central campus platform."
         meta={
           <>
-            <span className="caption-4 text-ink-500">Last sync, 8 minutes ago</span>
+            <span className="caption-4 text-ink-500">Last card sync, {student.card.lastSync}</span>
             <span className="font-mono caption-4 text-ink-500">{student.usn}</span>
           </>
         }
@@ -25,6 +30,8 @@ export function StudentServices() {
           Back to my card
         </Link>
       </PageHeader>
+
+      <DataNotice loading={loading} error={error} />
 
       <section className="mt-8">
         <SectionHead
@@ -70,7 +77,7 @@ export function StudentServices() {
             </thead>
             <tbody>
               {student.courses.map((course) => {
-                const rate = (course.attended / course.held) * 100
+                const rate = course.held > 0 ? (course.attended / course.held) * 100 : 0
                 return (
                   <tr key={course.code} className="border-b border-paper-200 last:border-b-0">
                     <th scope="row" className="py-3 pr-4 text-left">
@@ -96,7 +103,7 @@ export function StudentServices() {
         <section className="min-w-0 lg:col-span-5">
           <SectionHead
             title="Library"
-            description="Two books on loan and no pending dues."
+            description={`${loans.length} books on loan and no pending dues.`}
             action={<Pill label="Clear" tone="verified" />}
           />
           <ul className="mt-2">
@@ -133,7 +140,7 @@ export function StudentServices() {
                     <p className="mt-0.5 font-mono caption-5 text-ink-500">{exam.code}</p>
                   </div>
                   <p className="shrink-0 font-mono caption-4">
-                    {exam.date.replace(' 2026', '')}
+                    {exam.date.replace(/ \d{4}$/, '')}
                   </p>
                 </div>
                 <p className="mt-1 caption-5 text-ink-500">

@@ -1,16 +1,20 @@
 import { PageHeader, SectionHead } from '../../components/PageHeader'
 import { FeatureBars, RiskBar } from '../../components/Charts'
 import { RiskPill } from '../../components/Status'
-import { campusRisk, globalFeatures, modelInfo, watchlist } from '../../data/mock'
-
-const metrics = [
-  { label: 'ROC AUC', value: modelInfo.rocAuc },
-  { label: 'PR AUC', value: modelInfo.prAuc },
-  { label: 'Top-20% recall', value: modelInfo.atRiskRecall },
-  { label: 'Temporal ROC AUC', value: modelInfo.temporalRocAuc },
-]
+import { DataNotice } from '../../components/DataNotice'
+import { useInsights } from '../../data/hooks'
 
 export function AdminInsights() {
+  const { data, loading, error } = useInsights()
+  const { modelInfo, risk, globalFeatures, watchlist } = data
+
+  const metrics = [
+    { label: 'ROC AUC', value: modelInfo.rocAuc },
+    { label: 'PR AUC', value: modelInfo.prAuc },
+    { label: 'Top-20% recall', value: modelInfo.atRiskRecall },
+    { label: 'Temporal ROC AUC', value: modelInfo.temporalRocAuc },
+  ]
+
   return (
     <div>
       <PageHeader
@@ -18,11 +22,13 @@ export function AdminInsights() {
         description="Risk classes and model explanations for the current term."
         meta={
           <>
-            <span className="caption-4 text-ink-500">Validation run, 26 November 2026</span>
+            <span className="caption-4 text-ink-500">Validation run, {modelInfo.trained}</span>
             <span className="caption-4 text-ink-500">Cutoff day {modelInfo.cutoffDay}</span>
           </>
         }
       />
+
+      <DataNotice loading={loading} error={error} />
 
       <div className="mt-8 grid gap-8 lg:grid-cols-12">
         <section className="lg:col-span-5">
@@ -63,21 +69,21 @@ export function AdminInsights() {
           <div className="mt-4 rounded-2xl bg-paper-100 p-4 sm:p-6">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="heading-5">{campusRisk.support} students need support</p>
+                <p className="heading-5">{risk.support} students need support</p>
                 <p className="mt-1 caption-2 text-ink-500">
                   Top 10% flagged; the next 20% are watched.
                 </p>
               </div>
               <p className="font-mono caption-4 text-ink-500">
-                {campusRisk.total.toLocaleString('en-IN')} students
+                {risk.total.toLocaleString('en-IN')} students
               </p>
             </div>
             <div className="mt-6">
               <RiskBar
-                support={campusRisk.support}
-                watch={campusRisk.watch}
-                onTrack={campusRisk.onTrack}
-                total={campusRisk.total}
+                support={risk.support}
+                watch={risk.watch}
+                onTrack={risk.onTrack}
+                total={risk.total}
               />
             </div>
             <p className="mt-6 max-w-[680px] caption-5 text-ink-500 text-pretty">

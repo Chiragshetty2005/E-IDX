@@ -1,9 +1,9 @@
 import { QRCodeSVG } from 'qrcode.react'
-import type { Student } from '../types'
+import type { CardHolder } from '../types'
 import { cn } from '../lib/ui'
 
 interface EInkCardProps {
-  student: Student
+  student: CardHolder
   view?: 'identity' | 'services'
   size?: 'preview' | 'compact'
   programme?: string

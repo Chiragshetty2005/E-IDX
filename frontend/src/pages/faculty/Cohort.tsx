@@ -3,17 +3,25 @@ import { PageHeader, SectionHead } from '../../components/PageHeader'
 import { Pill, RiskPill } from '../../components/Status'
 import { TrendChart } from '../../components/Charts'
 import { buttonStyles } from '../../components/Button'
-import { attendanceTrend, cohortRisk, sessions, watchlist } from '../../data/mock'
+import { DataNotice } from '../../components/DataNotice'
+import { useCohort } from '../../data/hooks'
+import { useSession } from '../../session'
+import { attendanceTrend } from '../../data/mock'
 
 export function FacultyCohort() {
+  const { user } = useSession()
+  const { data, loading, error } = useCohort()
+  const { students, support, watch, interventions30d, watchlist, sessions } = data
+  const flagged = support + watch
+
   return (
     <div>
       <PageHeader
         title="CSE, Semester VI"
-        description="Section A, 62 students across four courses this term."
+        description={`Section A, ${students.toLocaleString('en-IN')} students across four courses this term.`}
         meta={
           <>
-            <span className="caption-4 text-ink-500">Mentor, Dr. Shahin Fatima</span>
+            <span className="caption-4 text-ink-500">Mentor, {user.name}</span>
             <span className="caption-4 text-ink-500">Week 8</span>
           </>
         }
@@ -23,27 +31,29 @@ export function FacultyCohort() {
         </Link>
       </PageHeader>
 
+      <DataNotice loading={loading} error={error} />
+
       <section className="mt-8 border-y border-paper-200 py-4" aria-label="Cohort figures">
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:divide-x sm:divide-paper-200">
           <div className="sm:pr-6">
             <dt className="caption-5 text-ink-500">Attendance this week</dt>
             <dd className="mt-1 font-mono heading-4 tabular-nums">80.4%</dd>
-            <p className="mt-1 caption-5 text-ink-500">Down 1.5 points</p>
+            <p className="mt-1 caption-5 text-ink-500">Illustrative weekly average</p>
           </div>
           <div className="sm:px-6">
-            <dt className="caption-5 text-ink-500">Below 75 percent</dt>
-            <dd className="mt-1 font-mono heading-4 tabular-nums">9</dd>
-            <p className="mt-1 caption-5 text-ink-500">Students in this section</p>
+            <dt className="caption-5 text-ink-500">Mentor notes</dt>
+            <dd className="mt-1 font-mono heading-4 tabular-nums">{interventions30d}</dd>
+            <p className="mt-1 caption-5 text-ink-500">Logged in the last 30 days</p>
           </div>
           <div className="sm:px-6">
-            <dt className="caption-5 text-ink-500">Sessions held</dt>
-            <dd className="mt-1 font-mono heading-4 tabular-nums">14</dd>
-            <p className="mt-1 caption-5 text-ink-500">This term</p>
+            <dt className="caption-5 text-ink-500">Sessions today</dt>
+            <dd className="mt-1 font-mono heading-4 tabular-nums">{sessions.length}</dd>
+            <p className="mt-1 caption-5 text-ink-500">Across four courses</p>
           </div>
           <div className="sm:pl-6">
             <dt className="caption-5 text-ink-500">Need support</dt>
-            <dd className="mt-1 font-mono heading-4 tabular-nums">{cohortRisk.support}</dd>
-            <p className="mt-1 caption-5 text-ink-500">Across four courses</p>
+            <dd className="mt-1 font-mono heading-4 tabular-nums">{support}</dd>
+            <p className="mt-1 caption-5 text-ink-500">{watch} more are on watch</p>
           </div>
         </dl>
       </section>
@@ -53,7 +63,11 @@ export function FacultyCohort() {
           <SectionHead
             title="Students who need support"
             description="Ranked by the latest model run. Reasons come from SHAP."
-            action={<span className="caption-5 text-ink-500">Showing 6 of 11</span>}
+            action={
+              <span className="caption-5 text-ink-500">
+                Showing {Math.min(6, watchlist.length)} of {flagged}
+              </span>
+            }
           />
           <ul className="mt-2">
             {watchlist.slice(0, 6).map((student) => (
@@ -85,6 +99,11 @@ export function FacultyCohort() {
               </li>
             ))}
           </ul>
+          {watchlist.length === 0 ? (
+            <p className="mt-3 caption-2 text-ink-500">
+              No students in this section are flagged in the latest run.
+            </p>
+          ) : null}
           <p className="mt-4 max-w-[680px] caption-5 text-ink-500 text-pretty">
             Each flag is a prompt for a conversation. The model never changes a grade, a fee record
             or a student's card status.
@@ -95,7 +114,7 @@ export function FacultyCohort() {
           <section>
             <SectionHead
               title="Attendance trend"
-              description="Section average over the last eight weeks."
+              description="Illustrative section average. Weekly attendance history is not stored yet."
             />
             <div className="mt-4 rounded-2xl bg-paper-100 p-4 sm:p-6">
               <TrendChart
@@ -141,6 +160,9 @@ export function FacultyCohort() {
                 </li>
               ))}
             </ul>
+            {sessions.length === 0 ? (
+              <p className="mt-3 caption-2 text-ink-500">No sessions are scheduled for today.</p>
+            ) : null}
           </section>
         </div>
       </div>

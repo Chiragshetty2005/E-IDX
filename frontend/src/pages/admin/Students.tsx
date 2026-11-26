@@ -7,7 +7,12 @@ import { CardStatusPill, RiskPill } from '../../components/Status'
 import { Drawer } from '../../components/Drawer'
 import { EInkCard } from '../../components/EInkCard'
 import { EmptyState } from '../../components/EmptyState'
-import { students } from '../../data/mock'
+import { DataNotice } from '../../components/DataNotice'
+import { errorMessage } from '../../api/client'
+import { endpoints } from '../../api/endpoints'
+import { useStudentsPage, useStudentRecord } from '../../data/hooks'
+import { useSession } from '../../session'
+import { useDebounced } from '../../lib/useDebounced'
 import { cardStatusLabel, cn } from '../../lib/ui'
 import type { CardStatus } from '../../types'
 
@@ -19,22 +24,60 @@ const statusOptions: { value: CardStatus | 'all'; label: string }[] = [
   { value: 'revoked', label: cardStatusLabel.revoked },
 ]
 
+function idempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
+  return `card-update-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 export function AdminStudents() {
+  const { isLive } = useSession()
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<CardStatus | 'all'>('all')
+  const [page, setPage] = useState(1)
   const [selectedUsn, setSelectedUsn] = useState<string | null>(null)
   const [queuedFor, setQueuedFor] = useState<string | null>(null)
+  const [queueMessage, setQueueMessage] = useState<string | null>(null)
 
-  const filtered = students.filter((student) => {
-    const matchesQuery =
-      student.name.toLowerCase().includes(query.trim().toLowerCase()) ||
-      student.usn.toLowerCase().includes(query.trim().toLowerCase())
-    const matchesStatus = status === 'all' || student.card.status === status
-    return matchesQuery && matchesStatus
-  })
+  const debouncedQuery = useDebounced(query, 250)
 
-  const selected = students.find((student) => student.usn === selectedUsn) ?? null
+  const { data, loading, error } = useStudentsPage(debouncedQuery, status, page)
+  const { data: record, loading: recordLoading } = useStudentRecord(selectedUsn)
+
+  const rows = data.students
   const hasFilters = query.trim().length > 0 || status !== 'all'
+  const selectedRow = rows.find((row) => row.usn === selectedUsn) ?? null
+
+  const clearFilters = () => {
+    setQuery('')
+    setStatus('all')
+    setPage(1)
+  }
+
+  const queueUpdate = async () => {
+    if (!record) return
+    if (!isLive) {
+      setQueuedFor(record.usn)
+      setQueueMessage(`Update queued for ${record.card.id}. It will be sent at the next wake.`)
+      return
+    }
+
+    try {
+      const response = await endpoints.queueCardUpdate(record.usn, {
+        change_type: 'status',
+        summary: 'Card record confirmed from the register',
+        payload: { status: record.card.status },
+        idempotency_key: idempotencyKey(),
+      })
+      setQueuedFor(record.usn)
+      setQueueMessage(
+        response.update.state === 'confirmed'
+          ? `Update confirmed on ${record.card.id}.`
+          : `Update queued for ${record.card.id}. It will be sent at the next wake.`,
+      )
+    } catch (cause) {
+      setQueueMessage(errorMessage(cause))
+    }
+  }
 
   return (
     <div>
@@ -43,7 +86,9 @@ export function AdminStudents() {
         description="Find a student, inspect their card and queue an update."
         meta={
           <span className="caption-4 text-ink-500">
-            {students.length} sample records from a register of 4,786
+            {isLive
+              ? `${data.pagination.total.toLocaleString('en-IN')} students in the register`
+              : '12 sample records from a register of 4,786'}
           </span>
         }
       >
@@ -51,6 +96,8 @@ export function AdminStudents() {
           Back to overview
         </Link>
       </PageHeader>
+
+      <DataNotice loading={loading} error={error} />
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative min-w-0 flex-1">
@@ -66,7 +113,10 @@ export function AdminStudents() {
             id="student-search"
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value)
+              setPage(1)
+            }}
             placeholder="Search by name or USN"
             className="h-10 w-full rounded-lg border border-paper-300 bg-paper-0 pl-8 pr-3 body-5 transition-colors duration-300 hover:border-ink-400 focus:border-ink-900"
           />
@@ -79,7 +129,10 @@ export function AdminStudents() {
           <select
             id="status-filter"
             value={status}
-            onChange={(event) => setStatus(event.target.value as CardStatus | 'all')}
+            onChange={(event) => {
+              setStatus(event.target.value as CardStatus | 'all')
+              setPage(1)
+            }}
             className="field w-full sm:w-40"
           >
             {statusOptions.map((option) => (
@@ -91,21 +144,14 @@ export function AdminStudents() {
         </div>
 
         {hasFilters ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setQuery('')
-              setStatus('all')
-            }}
-          >
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
             Clear filters
           </Button>
         ) : null}
       </div>
 
       <div className="mt-6">
-        {filtered.length === 0 ? (
+        {rows.length === 0 ? (
           <EmptyState
             title="No students match this search"
             description={
@@ -114,14 +160,7 @@ export function AdminStudents() {
                 : 'No cards match this status. Clear the filter to see the full register.'
             }
             action={
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setQuery('')
-                  setStatus('all')
-                }}
-              >
+              <Button variant="secondary" size="sm" onClick={clearFilters}>
                 Clear filters
               </Button>
             }
@@ -130,7 +169,7 @@ export function AdminStudents() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <caption className="sr-only">
-                Students, card status and last sync time. Sample records.
+                Students, card status and last sync time.
               </caption>
               <thead>
                 <tr className="border-b border-paper-200">
@@ -158,12 +197,13 @@ export function AdminStudents() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((student) => (
+                {rows.map((student) => (
                   <tr
                     key={student.usn}
                     onClick={() => {
                       setSelectedUsn(student.usn)
                       setQueuedFor(null)
+                      setQueueMessage(null)
                     }}
                     className="cursor-pointer border-b border-paper-200 transition-colors duration-300 hover:bg-paper-100/70"
                   >
@@ -214,6 +254,7 @@ export function AdminStudents() {
                           event.stopPropagation()
                           setSelectedUsn(student.usn)
                           setQueuedFor(null)
+                          setQueueMessage(null)
                         }}
                         className="caption-1 text-link"
                       >
@@ -228,41 +269,64 @@ export function AdminStudents() {
         )}
       </div>
 
-      <p className="mt-4 caption-5 text-ink-500">
-        Showing {filtered.length} of {students.length} sample records. The full register holds 4,786
-        students.
-      </p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="caption-5 text-ink-500">
+          {isLive
+            ? `Showing ${rows.length} of ${data.pagination.total.toLocaleString('en-IN')} students · page ${data.pagination.page} of ${data.pagination.pages}`
+            : `Showing ${rows.length} of ${rows.length} sample records. The full register holds 4,786 students.`}
+        </p>
+        {isLive && data.pagination.pages > 1 ? (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={data.pagination.page <= 1}
+              onClick={() => setPage((value) => Math.max(1, value - 1))}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={data.pagination.page >= data.pagination.pages}
+              onClick={() => setPage((value) => Math.min(data.pagination.pages, value + 1))}
+            >
+              Next
+            </Button>
+          </div>
+        ) : null}
+      </div>
 
       <Drawer
-        open={selected !== null}
+        open={selectedUsn !== null}
         onClose={() => setSelectedUsn(null)}
-        title={selected ? selected.name : 'Student record'}
+        title={record?.name ?? selectedRow?.name ?? 'Student record'}
       >
-        {selected ? (
+        {record ? (
           <div className="space-y-6">
-            <EInkCard student={selected} size="compact" />
+            <EInkCard student={record} size="compact" />
 
             <div className="flex flex-wrap items-center gap-2">
-              <CardStatusPill status={selected.card.status} />
-              <p className="font-mono caption-4 text-ink-500">{selected.card.id}</p>
+              <CardStatusPill status={record.card.status} />
+              <p className="font-mono caption-4 text-ink-500">{record.card.id}</p>
             </div>
 
             <dl className="grid grid-cols-2 gap-4">
               <div>
                 <dt className="caption-5 text-ink-500">Battery</dt>
-                <dd className="mt-1 font-mono caption-3">{selected.card.battery}%</dd>
+                <dd className="mt-1 font-mono caption-3">{record.card.battery}%</dd>
               </div>
               <div>
                 <dt className="caption-5 text-ink-500">Last sync</dt>
-                <dd className="mt-1 caption-3">{selected.card.lastSync}</dd>
+                <dd className="mt-1 caption-3">{record.card.lastSync}</dd>
               </div>
               <div>
                 <dt className="caption-5 text-ink-500">Valid until</dt>
-                <dd className="mt-1 caption-3">{selected.card.validTo}</dd>
+                <dd className="mt-1 caption-3">{record.card.validTo}</dd>
               </div>
               <div>
                 <dt className="caption-5 text-ink-500">Firmware</dt>
-                <dd className="mt-1 font-mono caption-3">{selected.card.firmware}</dd>
+                <dd className="mt-1 font-mono caption-3">{record.card.firmware}</dd>
               </div>
             </dl>
 
@@ -270,20 +334,20 @@ export function AdminStudents() {
               <dl className="space-y-3">
                 <div className="flex items-baseline justify-between gap-4">
                   <dt className="caption-2 text-ink-500">Programme</dt>
-                  <dd className="text-right body-5">{selected.programme}</dd>
+                  <dd className="text-right body-5">{record.programme}</dd>
                 </div>
                 <div className="flex items-baseline justify-between gap-4">
                   <dt className="caption-2 text-ink-500">Mentor</dt>
-                  <dd className="body-5">{selected.mentor}</dd>
+                  <dd className="body-5">{record.mentor}</dd>
                 </div>
                 <div className="flex items-baseline justify-between gap-4">
                   <dt className="caption-2 text-ink-500">Attendance</dt>
-                  <dd className="font-mono body-5">{selected.attendance.toFixed(1)}%</dd>
+                  <dd className="font-mono body-5">{record.attendance.toFixed(1)}%</dd>
                 </div>
                 <div className="flex items-baseline justify-between gap-4">
                   <dt className="caption-2 text-ink-500">Academic status</dt>
                   <dd>
-                    <RiskPill risk={selected.risk} />
+                    <RiskPill risk={record.risk} />
                   </dd>
                 </div>
               </dl>
@@ -291,38 +355,42 @@ export function AdminStudents() {
 
             <div className="rounded-xl bg-paper-100 p-3">
               <p className="caption-5 text-ink-500">Why the model flags this student</p>
-              <p className="mt-1 body-6 text-pretty">{selected.driver}</p>
+              <p className="mt-1 body-6 text-pretty">{record.driver}</p>
             </div>
 
             <div className="flex flex-wrap gap-3">
               <Button
                 size="sm"
-                disabled={selected.card.status === 'revoked' || selected.card.status === 'unprovisioned'}
-                onClick={() => setQueuedFor(selected.usn)}
+                disabled={record.card.status === 'revoked' || record.card.status === 'unprovisioned'}
+                onClick={() => void queueUpdate()}
               >
                 Queue update
               </Button>
               <Link
-                to={`/admin/verifications?q=${selected.usn}`}
+                to={`/admin/verifications?q=${record.usn}`}
                 className={buttonStyles('secondary', 'sm')}
               >
                 View checks
               </Link>
             </div>
 
-            {queuedFor === selected.usn ? (
+            {queuedFor === record.usn && queueMessage ? (
               <p className="caption-5 text-verified" role="status" aria-live="polite">
-                Update queued for {selected.card.id}. It will be sent at the next wake.
+                {queueMessage}
               </p>
             ) : null}
 
-            {selected.card.status === 'revoked' ? (
+            {record.card.status === 'revoked' ? (
               <p className="caption-5 text-critical">
                 This card is revoked. Provision a replacement before sending updates.
               </p>
             ) : null}
           </div>
-        ) : null}
+        ) : (
+          <p className="caption-2 text-ink-500" role="status">
+            {recordLoading ? 'Loading the student record…' : 'No record found for this student.'}
+          </p>
+        )}
       </Drawer>
     </div>
   )
