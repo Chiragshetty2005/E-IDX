@@ -89,7 +89,7 @@ export function AdminOverview() {
           <section className="mt-8">
             <SectionHead
               title="Recent card updates"
-              description="Sent to cards in the last hour."
+              description="The most recent updates sent to cards."
               action={
                 <Link to="/admin/students" className="caption-1 text-link">
                   Open register
@@ -131,7 +131,7 @@ export function AdminOverview() {
           <section>
             <SectionHead
               title="Recent verifications"
-              description="Server decisions from the last ten minutes."
+              description="The most recent decisions returned by the readers."
               action={
                 <Link to="/admin/verifications" className="caption-1 text-link">
                   Open log

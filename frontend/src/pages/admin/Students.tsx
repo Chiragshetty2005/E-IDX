@@ -88,7 +88,7 @@ export function AdminStudents() {
           <span className="caption-4 text-ink-500">
             {isLive
               ? `${data.pagination.total.toLocaleString('en-IN')} students in the register`
-              : '12 sample records from a register of 4,786'}
+              : '12 sample records · connect the API for the full register'}
           </span>
         }
       >
@@ -273,7 +273,7 @@ export function AdminStudents() {
         <p className="caption-5 text-ink-500">
           {isLive
             ? `Showing ${rows.length} of ${data.pagination.total.toLocaleString('en-IN')} students · page ${data.pagination.page} of ${data.pagination.pages}`
-            : `Showing ${rows.length} of ${rows.length} sample records. The full register holds 4,786 students.`}
+            : `Showing ${rows.length} of ${rows.length} sample records. Connect the API to search the full register.`}
         </p>
         {isLive && data.pagination.pages > 1 ? (
           <div className="flex items-center gap-2">

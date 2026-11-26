@@ -111,8 +111,8 @@ export function AdminInsights() {
 
         <section className="lg:col-span-5">
           <SectionHead
-            title="Highest risk this week"
-            description="Ranked by the latest probability."
+            title="Highest risk in the current run"
+            description="Ranked by the probability in the latest scoring run."
           />
           <ul className="mt-2">
             {watchlist.slice(0, 5).map((student) => (

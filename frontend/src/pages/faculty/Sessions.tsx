@@ -18,7 +18,7 @@ interface Tap {
 }
 
 export function FacultySessions() {
-  const { isLive } = useSession()
+  const { isLive, serverUser } = useSession()
   const { data: sessionRows, loading, error, refresh } = useSessions()
 
   const [openId, setOpenId] = useState<string | null>('S-442')
@@ -132,6 +132,7 @@ export function FacultySessions() {
   }
 
   const cohortSize = sessionRows[0]?.total ?? 62
+  const section = serverUser?.section ?? 'Section A'
 
   return (
     <div>
@@ -141,7 +142,9 @@ export function FacultySessions() {
         meta={
           <>
             <span className="caption-4 text-ink-500">Today</span>
-            <span className="caption-4 text-ink-500">Section A, {cohortSize} students</span>
+            <span className="caption-4 text-ink-500">
+              {section}, {cohortSize} students
+            </span>
           </>
         }
       >

@@ -14,6 +14,11 @@ export function StudentServices() {
   const feeReceipts = data.receipts
   const loans = data.loans
 
+  const attendanceTarget = 75
+  const meetsAttendance = student.attendance >= attendanceTarget
+  const overdue = loans.filter((loan) => loan.status === 'Overdue')
+  const unpaid = feeReceipts.filter((receipt) => receipt.status !== 'Paid')
+
   return (
     <div>
       <PageHeader
@@ -37,7 +42,12 @@ export function StudentServices() {
         <SectionHead
           title="Attendance"
           description="Written when your card is tapped during an open session."
-          action={<Pill label="No shortage" tone="verified" />}
+          action={
+            <Pill
+              label={meetsAttendance ? 'No shortage' : 'Below target'}
+              tone={meetsAttendance ? 'verified' : 'attention'}
+            />
+          }
         />
         <div className="mt-4 grid grid-cols-2 gap-4 border-y border-paper-200 py-4 sm:divide-x sm:divide-paper-200">
           <div className="sm:pr-6">
@@ -51,7 +61,7 @@ export function StudentServices() {
           </div>
           <div className="sm:pl-6">
             <p className="caption-5 text-ink-500">Requirement</p>
-            <p className="mt-1 font-mono heading-4 tabular-nums">75.0%</p>
+            <p className="mt-1 font-mono heading-4 tabular-nums">{attendanceTarget.toFixed(1)}%</p>
             <p className="mt-1 caption-5 text-ink-500">Minimum for the term</p>
           </div>
         </div>
@@ -103,8 +113,17 @@ export function StudentServices() {
         <section className="min-w-0 lg:col-span-5">
           <SectionHead
             title="Library"
-            description={`${loans.length} books on loan and no pending dues.`}
-            action={<Pill label="Clear" tone="verified" />}
+            description={
+              overdue.length > 0
+                ? `${loans.length} books on loan, ${overdue.length} past the due date.`
+                : `${loans.length} books on loan and no pending dues.`
+            }
+            action={
+              <Pill
+                label={overdue.length > 0 ? `${overdue.length} overdue` : 'Clear'}
+                tone={overdue.length > 0 ? 'attention' : 'verified'}
+              />
+            }
           />
           <ul className="mt-2">
             {loans.map((loan) => (
@@ -116,7 +135,10 @@ export function StudentServices() {
                   <p className="body-5">{loan.title}</p>
                   <p className="mt-0.5 caption-5 text-ink-500">Due {loan.due}</p>
                 </div>
-                <Pill label={loan.status} tone="neutral" />
+                <Pill
+                  label={loan.status}
+                  tone={loan.status === 'Overdue' ? 'attention' : 'neutral'}
+                />
               </li>
             ))}
           </ul>
@@ -194,7 +216,12 @@ export function StudentServices() {
         <SectionHead
           title="Fees"
           description="Payments recorded against your student account."
-          action={<Pill label="Paid" tone="verified" />}
+          action={
+            <Pill
+              label={unpaid.length > 0 ? `${unpaid.length} due` : 'Paid'}
+              tone={unpaid.length > 0 ? 'attention' : 'verified'}
+            />
+          }
         />
         <ul className="mt-2 sm:hidden">
           {feeReceipts.map((receipt) => (
@@ -261,8 +288,9 @@ export function StudentServices() {
           </table>
         </div>
         <p className="mt-4 caption-5 text-ink-500">
-          No dues for the current term. The library deposit is refundable when you leave the
-          university.
+          {unpaid.length > 0
+            ? 'Clear the outstanding amount at the accounts office. The library deposit is refundable when you leave the university.'
+            : 'No dues for the current term. The library deposit is refundable when you leave the university.'}
         </p>
       </section>
     </div>

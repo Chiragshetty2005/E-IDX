@@ -9,16 +9,18 @@ import { useSession } from '../../session'
 import { attendanceTrend } from '../../data/mock'
 
 export function FacultyCohort() {
-  const { user } = useSession()
+  const { user, serverUser } = useSession()
   const { data, loading, error } = useCohort()
   const { students, support, watch, interventions30d, watchlist, sessions } = data
   const flagged = support + watch
+  const section = serverUser?.section ?? 'Section A'
+  const courseCount = new Set(sessions.map((session) => session.code)).size
 
   return (
     <div>
       <PageHeader
         title="CSE, Semester VI"
-        description={`Section A, ${students.toLocaleString('en-IN')} students across four courses this term.`}
+        description={`${section}, ${students.toLocaleString('en-IN')} students in your cohort this term.`}
         meta={
           <>
             <span className="caption-4 text-ink-500">Mentor, {user.name}</span>
@@ -48,7 +50,9 @@ export function FacultyCohort() {
           <div className="sm:px-6">
             <dt className="caption-5 text-ink-500">Sessions today</dt>
             <dd className="mt-1 font-mono heading-4 tabular-nums">{sessions.length}</dd>
-            <p className="mt-1 caption-5 text-ink-500">Across four courses</p>
+            <p className="mt-1 caption-5 text-ink-500">
+              Across {courseCount} course{courseCount === 1 ? '' : 's'}
+            </p>
           </div>
           <div className="sm:pl-6">
             <dt className="caption-5 text-ink-500">Need support</dt>

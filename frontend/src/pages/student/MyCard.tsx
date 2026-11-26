@@ -19,6 +19,8 @@ export function StudentMyCard() {
   const attended = student.courses.reduce((sum, course) => sum + course.attended, 0)
   const held = student.courses.reduce((sum, course) => sum + course.held, 0)
   const nextExam = data.exams[0]
+  const overdue = data.loans.filter((loan) => loan.status === 'Overdue')
+  const unpaid = data.receipts.filter((receipt) => receipt.status !== 'Paid')
   const firstTerm = student.sgpa[0]
   const lastTerm = student.sgpa[student.sgpa.length - 1]
 
@@ -121,7 +123,7 @@ export function StudentMyCard() {
           </div>
           <div className="sm:px-6">
             <dt className="caption-5 text-ink-500">Library</dt>
-            <dd className="mt-1 body-1">No dues</dd>
+            <dd className="mt-1 body-1">{overdue.length > 0 ? 'Overdue' : 'No dues'}</dd>
             <p className="mt-1 caption-5 text-ink-500">{data.loans.length} books on loan</p>
           </div>
           <div className="sm:px-6">
@@ -136,10 +138,10 @@ export function StudentMyCard() {
           <div className="sm:pl-6">
             <dt className="caption-5 text-ink-500">Fees</dt>
             <dd className="mt-1 body-1">
-              {data.receipts[0]?.status ?? 'No record'}
+              {unpaid.length > 0 ? `${unpaid.length} due` : (data.receipts[0]?.status ?? 'No record')}
             </dd>
             <p className="mt-1 caption-5 text-ink-500">
-              {data.receipts[0] ? `${data.receipts[0].term}, no dues` : 'No receipt on file'}
+              {data.receipts[0] ? data.receipts[0].term : 'No receipt on file'}
             </p>
           </div>
         </dl>
@@ -201,7 +203,7 @@ export function StudentMyCard() {
         <section className="lg:col-span-5">
           <SectionHead
             title="Academic standing"
-            description={`CGPA ${student.cgpa.toFixed(2)} across six terms.`}
+            description={`CGPA ${student.cgpa.toFixed(2)} across ${student.sgpa.length} term${student.sgpa.length === 1 ? '' : 's'}.`}
           />
           <div className="mt-4 rounded-2xl bg-paper-100 p-4 sm:p-6">
             <TrendChart
@@ -219,8 +221,7 @@ export function StudentMyCard() {
         <h2 className="heading-6">Academic support stays with your mentor</h2>
         <p className="mt-2 max-w-[680px] body-6 text-ink-700 text-pretty">
           Support conversations are private to you and {student.mentor || 'your mentor'}. They never
-          appear on your card or change a grade. Office hours are Tuesday, 14:00 to 16:00, cabin B
-          312.
+          appear on your card and they never change a grade.
         </p>
       </section>
     </div>

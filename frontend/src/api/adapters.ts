@@ -118,6 +118,12 @@ export function formatRupees(amount: number): string {
   return `₹${amount.toLocaleString('en-IN')}`
 }
 
+/** True when an ISO timestamp is in the past. */
+export function isPast(iso: string | null | undefined): boolean {
+  if (!iso) return false
+  return new Date(iso).getTime() < Date.now()
+}
+
 /** `catboost-cutoff60-20261126065719` → `2026.11.26`. */
 export function modelBuild(version: string | null | undefined): string {
   if (!version) return '—'
@@ -566,7 +572,7 @@ export function toMeView(input: {
     loans: input.library.loans.map((loan) => ({
       title: loan.title,
       due: formatDate(loan.due_at),
-      status: loan.status,
+      status: isPast(loan.due_at) ? 'Overdue' : loan.status,
     })),
     receipts: input.fees.receipts.map((receipt) => ({
       term: receipt.term,

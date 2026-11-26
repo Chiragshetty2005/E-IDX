@@ -26,6 +26,7 @@ import {
   watchlist,
 } from './mock'
 import { initials } from '../api/adapters'
+import type { StudentProfile } from '../types'
 import type {
   AdminOverviewView,
   CohortView,
@@ -212,8 +213,31 @@ export function previewVerifications(filter?: {
 }
 
 export function previewMe(): MeView {
+  // The student view model has no risk fields, in preview mode as well as in
+  // live mode. The sample record is copied field by field for that reason.
+  const source = demoStudent
+  const student: StudentProfile = {
+    usn: source.usn,
+    name: source.name,
+    initials: source.initials,
+    programme: source.programme,
+    semester: source.semester,
+    section: source.section,
+    attendance: source.attendance,
+    cgpa: source.cgpa,
+    backlogs: source.backlogs,
+    internalMarks: source.internalMarks,
+    internalMax: source.internalMax,
+    assignmentRate: source.assignmentRate,
+    libraryVisits: source.libraryVisits,
+    mentor: source.mentor,
+    card: source.card,
+    courses: source.courses,
+    sgpa: source.sgpa,
+  }
+
   return {
-    student: demoStudent,
+    student,
     exams: exams.map((exam) => ({ ...exam })),
     loans: loans.map((loan) => ({ ...loan })),
     receipts: feeReceipts.map((receipt) => ({ ...receipt })),
