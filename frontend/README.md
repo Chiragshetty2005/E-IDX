@@ -1,18 +1,87 @@
 # E-IDX frontend
 
-Frontend preview for the E-IDX campus card platform. The interface covers campus card
-operations, academic support, student services and reader verification.
+React front end for the E-IDX campus card platform. It covers card operations, academic
+support, student services and reader verification for three roles: admin, faculty and student.
 
-The app is intentionally self-contained for now. It uses realistic sample data and does not
-connect to an API, database, card or reader.
+The app talks to the E-IDX API in `../backend` and falls back to the sample register in
+`src/data/mock.ts` when the API cannot be reached, so the demo still works with the backend
+switched off.
 
-The backend that implements this contract now lives in `../backend`. The frontend still reads
-`src/data/mock.ts`; the API client under `src/api/` is the next step. The sample data already
-mirrors the real trained model, so the screens do not have to change when the client lands.
+## Live and preview modes
 
-## Model metadata in the preview
+The shell always shows where the numbers come from.
 
-The preview shows the real model that was trained locally on OULAD, not placeholder numbers.
+| Badge | Meaning |
+| --- | --- |
+| `Live API` | The browser holds a server session and every screen reads from the API. |
+| `Connecting to the API` | The session check is still running. |
+| `Preview data` | The API is unreachable, so the sample register is shown. The reason is in the badge tooltip. |
+
+On start-up the app calls `GET /auth/session`. If that returns `401`, it signs in with the
+preview sign-in endpoint using the role stored in `localStorage` under `eidx-role`. The preview
+sign-in is a demo affordance and must be replaced by campus SSO before deployment.
+
+Switching roles in live mode calls `POST /auth/preview-login` again, so the server session and
+the screen always agree. The route guard in `App.tsx` is a preview convenience only: the API
+enforces the role on every request.
+
+## Run locally
+
+Requires Node 22 or newer, and the backend running on port 4000.
+
+```bash
+# terminal 1, from ../backend
+docker compose up -d
+npm run migrate
+npm run export:risk   # once, with ml/.venv
+npm run seed
+npm run dev
+
+# terminal 2, from this folder
+npm install
+npm run dev
+```
+
+Vite proxies `/api` to `http://localhost:4000`, so the browser stays on one origin and the
+HttpOnly session cookie is sent without any CORS setup. A deployed build can point elsewhere
+with `VITE_API_URL`, for example `VITE_API_URL=https://api.example.edu/api/v1`.
+
+Other commands:
+
+```bash
+npm run build       # type-check and production build
+npm run preview     # serve the production build (same /api proxy)
+npm run lint        # Oxlint
+npm run smoke:api   # client checks against a running API
+```
+
+`npm run smoke:api` signs in with each role, pulls every endpoint the dashboards use and runs
+the real adapters over the payloads. It catches shape drift between the backend routes and
+`src/api/adapters.ts` without a browser.
+
+## What each screen reads
+
+| Screen | Endpoints |
+| --- | --- |
+| Admin overview | `GET /admin/overview` |
+| Students and cards | `GET /students`, `GET /students/:usn`, `POST /students/:usn/card-updates` |
+| Verification log | `GET /verifications`, `GET /verifications/summary` |
+| Academic intelligence | `GET /insights/risk`, `GET /insights/model`, `GET /faculty/cohort` |
+| Card studio | `GET /students`, `GET /students/:usn`, `POST /students/:usn/card-updates` |
+| Faculty cohort | `GET /faculty/cohort`, `GET /sessions` |
+| Faculty student record | `GET /students/:usn`, `POST /faculty/students/:usn/interventions` |
+| Attendance sessions | `GET /sessions`, `POST /sessions/:id/open`, `POST /sessions/:id/close` |
+| Student card and services | `GET /me/*`, `POST /me/pass` |
+| Verification console | Scripted test cases only, no API call |
+
+Search, filtering and pagination run on the server for the students register and the
+verification log. The sample data is filtered in the browser when the app is in preview mode.
+
+## Model metadata
+
+The screens show the real model that was trained locally on OULAD, not placeholder numbers.
+In live mode the numbers come from `GET /insights/model` and the risk classes from
+`GET /insights/risk`.
 
 | Item | Value |
 | --- | --- |
@@ -29,67 +98,21 @@ taps are never used to train it. Socioeconomic attributes are excluded from the 
 used only for subgroup checks. The fairness audit and the full model card live in
 `../ml/artifacts/`.
 
-## Run locally
-
-Requires Node 22 or newer.
-
-```bash
-npm install
-npm run dev
-```
-
-Open the URL printed by Vite. Other commands:
-
-```bash
-npm run build    # type-check and production build
-npm run preview  # serve the production build
-npm run lint     # Oxlint
-```
-
-## Preview roles
-
-The role switcher in the sidebar or mobile menu is a preview control. It is not authentication.
-The selected role is stored in `localStorage` under `eidx-role`, and the route guard is
-client-side only. Real access control must be enforced by the backend.
-
-| Role | Home | Screens |
-| --- | --- | --- |
-| Admin, card services | `/admin` | Overview, students and cards, verification log, academic intelligence, verification console |
-| Faculty, CSE | `/faculty` | Cohort, student record, attendance sessions, verification console |
-| Student, card holder | `/student` | My card, campus services |
-
-The demo student is Chirag P Shetty, `1DS23CS0048`. Use the role switcher to move between
-accounts. Unauthorised URLs redirect to the active role's home; for example, `/admin` while
-using the student role opens `/student`.
-
-## What is implemented
-
-- Admin overview with card studio, live update simulation, recent card updates, recent checks,
-  cards needing attention and the academic snapshot.
-- Student and card register with search, status filtering, a detail drawer and a queue-update
-  flow.
-- Verification log with hourly volume, reader health, student filtering and result filters.
-- Academic intelligence screen with risk distribution, drivers, model information and privacy
-  notes.
-- Faculty cohort with support/watch lists, student records, model explanations, mentor notes,
-  attendance and SGPA trends.
-- Attendance sessions with an open/close flow, simulated taps and live counts.
-- Verification console with QR and NFC test cases and backend-style accepted, expired, revoked
-  and cloned outcomes.
-- Student card with an identity/services E Ink preview, rotating QR pass and attendance summary.
-- Campus services for attendance, library, examinations and fees.
-- Responsive layouts tested at 320, 390 and 1440 pixels, 404 screen, keyboard focus states and
-  reduced-motion support.
-
-All numbers and names are sample data. The shell includes a "Preview data" label and every
-screen ends with a note that no card or server is connected.
-
 ## Source layout
 
 ```text
 src/
+  api/
+    client.ts       Fetch wrapper: cookies, timeout, typed errors
+    endpoints.ts    One function per API route
+    types.ts        Wire types that mirror the backend routes
+    adapters.ts     Wire payloads into the view models the pages use
   components/       App shell, card preview, card studio, charts, QR pass, buttons, status
-  data/mock.ts      Sample students, checks, sessions, services and model metadata
+  data/
+    mock.ts         Sample students, checks, sessions, services and model metadata
+    preview.ts      Sample data rendered into the same view models the API produces
+    views.ts        View models shared by the pages
+    hooks.ts        Data hooks with live loading, error and fallback handling
   lib/ui.ts         Small class and label helpers
   pages/admin/      Admin overview, students, verification log, insights
   pages/faculty/    Cohort, student detail, sessions
@@ -97,81 +120,48 @@ src/
   pages/Verify.tsx  Reader verification simulator
   App.tsx           Route map and preview role guard
   index.css         Design tokens and named text styles
-  session.tsx       Demo session and role state
-  types.ts          Domain types shared with the future API
+  session.tsx       Server session, data mode and role state
+  types.ts          Domain types shared with the API
 ```
-
-## Backend handoff
-
-Data currently comes from `src/data/mock.ts`. Components consume the domain types in
-`src/types.ts`. When the backend exists, replace those imports with API calls while keeping the
-same component-facing shapes. The pages should not need to know how data is fetched.
-
-The contract below is implemented in `../backend` under the `/api/v1` prefix, with server-side
-role checks, HttpOnly session cookies and ISO 8601 timestamps.
-
-| Surface | Proposed endpoints | Notes |
-| --- | --- | --- |
-| Session | `GET /me` | Current user, role and permissions. Replaces the preview role switch. |
-| Admin overview | `GET /admin/overview` | Campus figures, risk totals, recent card updates, recent checks and attention cards in one read. |
-| Students | `GET /students?query=&status=&page=&limit=` | Paginated. Include card summary with each student. |
-| Student record | `GET /students/:usn` | Profile, courses, SGPA and card. Risk fields only for authorised staff. |
-| Card update | `POST /students/:usn/card-updates` | Queue a stepped-up update. Require an idempotency key and audit actor. |
-| Verification log | `GET /verifications?result=&method=&q=&from=&to=&page=` | Filter server-side. Return counts for the summary strip. |
-| Verification | `POST /verify` | Backend-authoritative decision. Body: `{ token, method, readerId }`. Return `accepted`, `reason`, latency and a minimal student summary only on success. |
-| Faculty cohort | `GET /faculty/cohort` | Cohort totals plus students with risk tier, driver and last intervention. |
-| Student support | `GET /faculty/students/:usn` | Staff view with risk explanation and mentor notes. |
-| Mentor note | `POST /faculty/students/:usn/interventions` | Append-only note with author and server timestamp. |
-| Sessions | `GET /sessions?date=` | Session list with present counts and state. |
-| Session control | `POST /sessions/:id/open`, `POST /sessions/:id/close` | Only one open session per section. |
-| Session taps | `POST /sessions/:id/taps` | Reader-to-server path. Authenticate the reader; do not expose this to the browser. |
-| Student card | `GET /me/card`, `POST /me/pass` | Card state and a short-lived signed pass. The pass must not contain risk data. |
-| Campus services | `GET /me/attendance`, `GET /me/library`, `GET /me/exams`, `GET /me/fees` | Scope every read to the signed-in student. |
-| Insights | `GET /insights/risk`, `GET /insights/model`, `GET /students/:usn/explanation` | Staff-only. Explanations return feature contributions, not raw model internals. |
-
-Mutating endpoints should return the updated resource or a job identifier. Card updates and
-verification writes are asynchronous in reality, so model their status instead of assuming an
-instant success.
 
 ## Privacy and security rules
 
 These are product invariants, not optional polish:
 
 1. **Risk never reaches the card or the student app.** No risk probability, tier or explanation
-   may appear in `/me/*` responses, `POST /me/pass` payloads or card update payloads. Risk is
-   shown only on staff surfaces and is framed as support, never as a sanction.
-2. **The backend decides trust.** The card displays a signed, short-lived pass. The server must
-   check signature, expiry, single-use nonce, card status and reader scope before writing
-   attendance or granting entry.
-3. **Authenticate and authorise every request.** Use campus SSO, HttpOnly cookies and CSRF
-   protection for browser mutations. Enforce role and record scope on the server. The current
-   client-side role guard is only a preview convenience.
-4. **Audit sensitive reads and writes.** Log staff access to risk explanations and all card,
-   intervention, session and revocation changes with actor, reason and timestamp.
-5. **Minimise data.** Return only the fields a screen needs. Do not include socioeconomic
-   attributes in deployed model inputs or staff explanations. Verification logs should show a
-   rejected card's identity only to authorised operators.
-6. **Reader traffic is device traffic.** Readers need device credentials or mutual TLS,
-   server-side replay protection and rate limits. Remove the browser "simulate tap" endpoint
-   from production or restrict it to a development environment.
+   appears in `/me/*` responses, `POST /me/pass` payloads or card update payloads. The student
+   view model in `src/types.ts` has no risk fields at all, so the client cannot leak them by
+   accident. Risk is shown only on staff surfaces and is framed as support, never as a sanction.
+2. **The backend decides trust.** The card displays a signed, short-lived pass. The server checks
+   signature, expiry, card status and session window before writing attendance or granting entry.
+3. **Authenticate and authorise every request.** The API uses an HttpOnly session cookie and
+   enforces role and record scope on the server. The client-side role guard is only a preview
+   convenience.
+4. **Audit sensitive reads and writes.** Staff access to risk explanations and all card,
+   intervention, session and revocation changes are recorded with actor, reason and timestamp.
+5. **Minimise data.** Endpoints return only the fields a screen needs. Socioeconomic attributes
+   are not in model inputs or staff explanations.
+6. **Reader traffic is device traffic.** Readers need device credentials, server-side replay
+   protection and rate limits. The browser never posts attendance; the tap simulator on the
+   sessions screen stays in the browser and is labelled as a test.
 
 ## Preview limitations
 
-- The frontend still reads sample data; the API client has not been wired in yet. The backend in
-  `../backend` serves the same shapes.
-- The role switcher is not a security boundary. The backend enforces roles on the server and
-  issues real sessions, but the preview sign-in is not campus SSO.
-- Mentor notes, queued card updates, session state and verification outcomes live in component
-  memory and reset on reload.
-- The verification console runs scripted test cases; it does not scan a real QR code or NFC tag.
-- Dates and times are fixed sample values. Some simulated actions use a mock clock so they stay
-  inside the open session window.
+- The preview sign-in is not campus SSO. `POST /auth/preview-login` issues a real session, but it
+  is a demo affordance and the API can disable it with `PREVIEW_AUTH=false`.
+- The verification console runs scripted test cases; it does not scan a real QR code or NFC tag,
+  and it does not post to the API.
+- The tap simulator on the attendance screen is local to the browser. Real readers post taps to
+  `POST /sessions/:id/taps` with device credentials.
+- The faculty attendance trend chart is illustrative. Weekly attendance history is not stored yet.
+- In preview mode, mentor notes, queued card updates and session state live in component memory
+  and reset on reload.
 
 ## Next steps
 
-1. Add the API client under `src/api/` and replace the `src/data/mock.ts` imports.
-2. Replace the preview sign-in with campus SSO and keep the server-side role checks.
-3. Integrate signed rotating passes and reader verification with real hardware.
-4. Add end-to-end tests for role boundaries, card updates, verification outcomes, attendance
+1. Replace the preview sign-in with campus SSO and keep the server-side role checks.
+2. Integrate signed rotating passes and reader verification with real hardware.
+3. Add end-to-end tests for role boundaries, card updates, verification outcomes, attendance
    and mentor notes.
+4. Store weekly attendance history so the faculty trend chart can read real data.
 5. Run the model on live institutional data and re-check the fairness gaps before any pilot.

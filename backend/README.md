@@ -35,6 +35,23 @@ cd backend && ../ml/.venv/bin/python scripts/export_risk_seed.py
 
 The script is wired to that interpreter through the `export:risk` npm script.
 
+## Talking to the frontend
+
+The React app in `../frontend` calls this API through the Vite dev proxy, so
+the browser stays on one origin and the `eidx_session` cookie is sent on every
+request:
+
+```text
+browser  ──▶  http://localhost:5173/api/v1/…  ──▶  http://localhost:4000/api/v1/…
+```
+
+There is no CORS configuration. A deployed build can point at another host with
+`VITE_API_URL`, and that host must then allow the origin with credentials.
+
+The API never scores on the fly. It serves the predictions exported from the
+frozen ML artifacts, so a new model run needs `npm run export:risk` followed by
+`npm run seed` before the dashboards can show it.
+
 ## Tests
 
 ```bash
@@ -119,19 +136,20 @@ Base path `/api/v1`. Session cookie `eidx_session` (httpOnly).
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| GET | `/admin/overview` | Campus figures, risk totals, recent card updates, recent checks, attention cards. |
-| GET | `/students?query=&status=&page=&limit=` | Paginated, includes card and latest tier. |
+| GET | `/admin/overview` | Campus figures, risk totals, recent card updates, recent checks, attention cards. Updates and checks carry the student name, card UID and reader location. |
+| GET | `/students?query=&status=&page=&limit=` | Paginated, includes card and latest tier. Sorted by risk probability. |
 | GET | `/students/:usn` | Full record plus the frozen risk payload. |
 | GET | `/students/:usn/explanation` | Feature contributions only, no model internals. |
 | POST | `/students/:usn/card-updates` | Queues an update. Requires an idempotency key and an audit actor. |
-| GET | `/faculty/cohort` | Cohort totals with tier, driver and last intervention. |
+| GET | `/faculty/cohort?limit=` | Cohort totals with tier, driver and last intervention. Faculty users see only their own section; admins see the whole campus. `limit` defaults to 200 and is capped at 500. |
 | GET | `/faculty/students/:usn` | Staff view with notes and risk. |
 | POST | `/faculty/students/:usn/interventions` | Append-only mentor note. |
-| GET | `/verifications?result=&method=&q=&from=&to=&page=` | Filtered log with summary counts. |
+| GET | `/verifications?result=&method=&q=&from=&to=&page=&limit=` | Filtered log with summary counts. |
+| GET | `/verifications/summary` | Totals and median latency for today, reader health and the hourly verification volume. |
 | POST | `/verify` | Backend-authoritative decision for `{ token, method, readerId }`. |
-| GET | `/sessions?date=` | Sessions with present counts. |
-| POST | `/sessions`, `/sessions/:id/open`, `/sessions/:id/close` | Session control. |
-| GET | `/insights/risk`, `/insights/model` | Tier distribution and the frozen model contract. |
+| GET | `/sessions?date=` | Sessions with present counts. `total_expected` is the size of the creating faculty member's section. |
+| POST | `/sessions`, `/sessions/:id/open`, `/sessions/:id/close` | Session control. Only one session stays open at a time. |
+| GET | `/insights/risk`, `/insights/model` | Tier distribution and the frozen model contract, including `student_count` and `brier`. |
 
 ### Reader devices
 
@@ -160,15 +178,24 @@ Prediction payloads match `ml/artifacts/prediction_payload.schema.json`:
 
 * 4,786 students with the campus tier split used by the frontend preview:
   479 support, 957 watch, 3,350 on-track.
+* Six teaching sections. Section A is the teaching cohort used by the faculty
+  screens: 62 students (the twelve named preview students plus 50 spread across
+  the register by stride), 9 support, 13 watch, 40 on-track. Dr. Shahin Fatima
+  teaches Section A and Dr. Anita Rao teaches Section B. The other sections hold
+  the remaining 4,724 students.
 * The twelve named preview students map to real OULAD rows of the matching
   tier, so the dashboard and the API tell the same story.
 * Cards, enrolments, attendance summaries, academic profiles, exams, library
   loans, fee receipts, attendance sessions, verification events, card updates
   and mentor notes.
+* Six readers with distinct ids and locations: `GATE 01`, `GATE 02`, `GATE 03`,
+  `LIB 02`, `CSE 03` and `EXAM 01`.
 * One risk prediction and one feature snapshot per student.
 
 The seed is deterministic: identifiers come from a stable hash of the entity
-key, so re-running it reproduces the same database.
+key, so re-running it reproduces the same database. Re-seeding truncates the
+session table, so any browser session signed in before the seed is dropped and
+signs in again on the next request.
 
 ## Known limitations
 
