@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, monospace;
+
+  --color-paper-0: #fbfcf8;
+  --color-paper-50: #f3f5ef;
+  --color-paper-100: #e9ede3;
+  --color-paper-200: #dbe1d4;
+  --color-paper-300: #c6cec0;
+
+  --color-ink-900: #151917;
+  --color-ink-800: #232925;
+  --color-ink-700: #3a423c;
+  --color-ink-500: #68706a;
+  --color-ink-400: #848c85;
+  --color-ink-300: #a8afa7;
+
+  --color-verified: #1f5b3f;
+  --color-verified-soft: #e3eee7;
+  --color-attention: #75520f;
+  --color-attention-soft: #f2ead6;
+  --color-critical: #8c2c1e;
+  --color-critical-soft: #f6e3df;
+
+  --color-eink: #f2f3ec;
+  --color-eink-ink: #171a18;
+
+  --ease-base: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow-eink: 0 24px 48px -28px rgb(21 25 23 / 0.55);
+}
+
+@layer base {
+  html {
+    @apply bg-paper-50 font-sans text-ink-900 antialiased;
+  }
+
+  body {
+    @apply min-h-dvh bg-paper-50;
+  }
+
+  ::selection {
+    @apply bg-ink-900 text-paper-50;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    @apply outline-none;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    @apply ring-2 ring-ink-900 ring-offset-2 ring-offset-paper-50;
+  }
+
+  input,
+  select,
+  textarea {
+    @apply text-ink-900 placeholder:text-ink-400;
+  }
+}
+
+@layer components {
+  .heading-1 {
+    @apply text-6xl font-semibold;
+  }
+  .heading-2 {
+    @apply text-5xl font-semibold;
+  }
+  .heading-3 {
+    @apply text-4xl font-semibold;
+  }
+  .heading-4 {
+    @apply text-3xl font-semibold;
+  }
+  .heading-5 {
+    @apply text-2xl font-semibold;
+  }
+  .heading-6 {
+    @apply text-xl font-semibold;
+  }
+
+  .title-1 {
+    @apply text-xl font-medium;
+  }
+  .title-2 {
+    @apply text-lg font-medium;
+  }
+  .title-3 {
+    @apply text-base font-medium;
+  }
+  .title-4 {
+    @apply text-sm font-medium;
+  }
+  .title-5 {
+    @apply text-xs font-medium;
+  }
+
+  .body-1 {
+    @apply text-base font-semibold;
+  }
+  .body-2 {
+    @apply text-base font-medium;
+  }
+  .body-3 {
+    @apply text-base font-normal;
+  }
+  .body-4 {
+    @apply text-sm font-semibold;
+  }
+  .body-5 {
+    @apply text-sm font-medium;
+  }
+  .body-6 {
+    @apply text-sm font-normal;
+  }
+
+  .button-lg {
+    @apply text-lg font-semibold;
+  }
+  .button-md {
+    @apply text-base font-semibold;
+  }
+  .button-sm {
+    @apply text-sm font-semibold;
+  }
+  .button-xsm {
+    @apply text-xs font-semibold;
+  }
+
+  .caption-1 {
+    @apply text-sm font-medium;
+  }
+  .caption-2 {
+    @apply text-sm font-normal;
+  }
+  .caption-3 {
+    @apply text-xs font-semibold;
+  }
+  .caption-4 {
+    @apply text-xs font-medium;
+  }
+  .caption-5 {
+    @apply text-xs font-normal;
+  }
+
+  .focus-ring {
+    @apply focus-visible:ring-2 focus-visible:ring-ink-900 focus-visible:ring-offset-2 focus-visible:ring-offset-paper-50;
+  }
+
+  .focus-ring-light {
+    @apply focus-visible:ring-2 focus-visible:ring-paper-50 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900;
+  }
+
+  .text-link {
+    @apply underline decoration-paper-300 decoration-1 underline-offset-4 transition-colors duration-300 hover:decoration-ink-900;
+  }
+
+  .rule {
+    @apply border-t border-paper-200;
+  }
+
+  .field {
+    @apply h-10 w-full rounded-lg border border-paper-300 bg-paper-0 px-3 text-sm font-medium transition-colors duration-300 hover:border-ink-400 focus:border-ink-900;
+  }
+
+  .field-label {
+    @apply mb-2 block text-sm font-medium text-ink-700;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
