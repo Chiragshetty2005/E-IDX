@@ -42,11 +42,12 @@ const COURSES = [
 ]
 
 const READERS = [
-  { name: 'Gate 01', location: 'Main gate' },
-  { name: 'Gate 02', location: 'Main gate' },
-  { name: 'Library desk', location: 'Library desk' },
-  { name: 'Block C lab', location: 'Block C lab' },
-  { name: 'Exam hall', location: 'Exam hall' },
+  { name: 'GATE 01', location: 'Main gate' },
+  { name: 'GATE 02', location: 'Main gate' },
+  { name: 'GATE 03', location: 'Hostel gate' },
+  { name: 'LIB 02', location: 'Library desk' },
+  { name: 'CSE 03', location: 'Block C lab' },
+  { name: 'EXAM 01', location: 'Exam hall' },
 ]
 
 interface DemoStudent {
@@ -399,8 +400,8 @@ async function main(): Promise<void> {
       ['id', 'external_id', 'full_name', 'email', 'role', 'programme', 'semester', 'section'],
       [
         [adminId, ADMIN_EXTERNAL_ID, ADMIN_NAME, 'kavya.srinivas@eidx.edu', 'admin', null, null, null],
-        [facultyId, FACULTY_EXTERNAL_ID, FACULTY_NAME, 'shahin.fatima@eidx.edu', 'faculty', PROGRAMME, null, null],
-        [faculty2Id, FACULTY_2_EXTERNAL_ID, FACULTY_2_NAME, 'anita.rao@eidx.edu', 'faculty', PROGRAMME, null, null],
+        [facultyId, FACULTY_EXTERNAL_ID, FACULTY_NAME, 'shahin.fatima@eidx.edu', 'faculty', PROGRAMME, null, 'Section A'],
+        [faculty2Id, FACULTY_2_EXTERNAL_ID, FACULTY_2_NAME, 'anita.rao@eidx.edu', 'faculty', PROGRAMME, null, 'Section B'],
       ],
     )
 
@@ -507,6 +508,34 @@ async function main(): Promise<void> {
       })
     })
 
+    // The twelve named preview students plus fifty students spread across the
+    // register form a 62-student teaching cohort (Section A). The rest of the
+    // sampled register is split into parallel sections so the admin register
+    // stays realistic while the faculty screens keep a class-sized cohort.
+    const TEACHING_COHORT_SIZE = 62
+    const COHORT_SECTION = 'Section A'
+    const OTHER_SECTIONS = ['Section B', 'Section C', 'Section D', 'Section E', 'Section F']
+    const cohort: SeededStudent[] = seeded.slice(0, DEMO_STUDENTS.length)
+    const bulkPool = seeded.slice(DEMO_STUDENTS.length)
+    const remainingCohort = TEACHING_COHORT_SIZE - cohort.length
+    const cohortStride = Math.max(1, Math.floor(bulkPool.length / remainingCohort))
+    for (
+      let index = 0;
+      cohort.length < TEACHING_COHORT_SIZE && index < bulkPool.length;
+      index += cohortStride
+    ) {
+      cohort.push(bulkPool[index] as SeededStudent)
+    }
+    const cohortIds = new Set(cohort.map((student) => student.id))
+    const sectionByStudent = new Map(
+      seeded.map((student, index) => [
+        student.id,
+        cohortIds.has(student.id)
+          ? COHORT_SECTION
+          : (OTHER_SECTIONS[index % OTHER_SECTIONS.length] as string),
+      ]),
+    )
+
     await insertMany(
       client,
       'app_users',
@@ -529,7 +558,7 @@ async function main(): Promise<void> {
         'student',
         PROGRAMME,
         SEMESTER,
-        SECTION,
+        sectionByStudent.get(student.id) ?? SECTION,
         student.mentorId,
       ]),
     )
@@ -735,10 +764,10 @@ async function main(): Promise<void> {
     // ------------------------------------------------------------- sessions
     const now = new Date()
     const sessionRows: Param[][] = [
-      [uuidV5('session:today:CS601'), 'CS601', 'Software engineering', 'Block C 203', new Date(now.getTime() - 55 * 60 * 1000), new Date(now.getTime() + 20 * 60 * 1000), 'open', seeded.length, facultyId],
-      [uuidV5('session:today:CS602'), 'CS602', 'Machine learning', 'Block C 204', new Date(now.getTime() + 60 * 60 * 1000), new Date(now.getTime() + 2 * 60 * 60 * 1000), 'upcoming', seeded.length, facultyId],
-      [uuidV5('session:today:CS603'), 'CS603', 'Cloud computing', 'Block B 101', new Date(now.getTime() - 4 * 60 * 60 * 1000), new Date(now.getTime() - 3 * 60 * 60 * 1000), 'closed', seeded.length, faculty2Id],
-      [uuidV5('session:yesterday:CS601'), 'CS601', 'Software engineering', 'Block C 203', new Date(now.getTime() - 26 * 60 * 60 * 1000), new Date(now.getTime() - 25 * 60 * 60 * 1000), 'closed', seeded.length, facultyId],
+      [uuidV5('session:today:CS601'), 'CS601', 'Software engineering', 'Block C 203', new Date(now.getTime() - 55 * 60 * 1000), new Date(now.getTime() + 20 * 60 * 1000), 'open', cohort.length, facultyId],
+      [uuidV5('session:today:CS602'), 'CS602', 'Machine learning', 'Block C 204', new Date(now.getTime() + 60 * 60 * 1000), new Date(now.getTime() + 2 * 60 * 60 * 1000), 'upcoming', cohort.length, facultyId],
+      [uuidV5('session:today:CS603'), 'CS603', 'Cloud computing', 'Block B 101', new Date(now.getTime() - 4 * 60 * 60 * 1000), new Date(now.getTime() - 3 * 60 * 60 * 1000), 'closed', cohort.length, faculty2Id],
+      [uuidV5('session:yesterday:CS601'), 'CS601', 'Software engineering', 'Block C 203', new Date(now.getTime() - 26 * 60 * 60 * 1000), new Date(now.getTime() - 25 * 60 * 60 * 1000), 'closed', cohort.length, facultyId],
     ]
     await insertMany(
       client,
@@ -749,7 +778,7 @@ async function main(): Promise<void> {
 
     const openSessionId = uuidV5('session:today:CS601')
     const tapRows: Param[][] = []
-    seeded.slice(0, 120).forEach((student, index) => {
+    cohort.slice(0, 51).forEach((student, index) => {
       tapRows.push([
         uuidV5(`tap:${openSessionId}:${student.id}`),
         openSessionId,
@@ -853,7 +882,7 @@ async function main(): Promise<void> {
         ])
       }
     }
-    for (const student of seeded.filter((candidate) => candidate.tier === 'support').slice(0, 60)) {
+    for (const student of cohort.filter((candidate) => candidate.tier === 'support').slice(0, 60)) {
       interventionRows.push([
         uuidV5(`intervention:${student.id}:${interventionIndex++}`),
         student.id,

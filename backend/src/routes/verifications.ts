@@ -52,11 +52,14 @@ export async function verificationRoutes(app: FastifyInstance): Promise<void> {
           reason: string | null
           latency_ms: number | null
           reader_id: string
+          location: string | null
           verified_at: Date
         }>(
           `SELECT v.id, u.external_id AS usn, u.full_name AS name, v.method, v.result,
-                  v.reason, v.latency_ms, v.reader_id, v.verified_at
-             FROM verification_events v LEFT JOIN app_users u ON u.id = v.student_id
+                  v.reason, v.latency_ms, v.reader_id, r.location, v.verified_at
+             FROM verification_events v
+             LEFT JOIN app_users u ON u.id = v.student_id
+             LEFT JOIN readers r ON r.name = v.reader_id
              ${where}
              ORDER BY v.verified_at DESC
              LIMIT $6 OFFSET $7`,
@@ -83,6 +86,7 @@ export async function verificationRoutes(app: FastifyInstance): Promise<void> {
           reason: row.reason,
           latency_ms: row.latency_ms,
           reader: row.reader_id,
+          location: row.location,
           verified_at: row.verified_at.toISOString(),
         })),
         summary: {
@@ -91,6 +95,72 @@ export async function verificationRoutes(app: FastifyInstance): Promise<void> {
           rejected: summary?.rejected ?? 0,
         },
         pagination: { page, limit, total: summary?.total ?? 0 },
+      }
+    },
+  )
+
+  app.get(
+    '/verifications/summary',
+    { preHandler: app.requireRole(['admin', 'faculty']) },
+    async () => {
+      const [readers, hourly, summary] = await Promise.all([
+        query<{
+          name: string
+          location: string
+          status: string
+          median_seconds: number | null
+          checks: number
+        }>(
+          `SELECT r.name, r.location, r.status,
+                  ROUND((percentile_cont(0.5) WITHIN GROUP (ORDER BY v.latency_ms))::numeric / 1000, 2)
+                    AS median_seconds,
+                  COUNT(v.id)::int AS checks
+             FROM readers r
+             LEFT JOIN verification_events v ON v.reader_id = r.name
+            GROUP BY r.name, r.location, r.status
+            ORDER BY r.name`,
+        ),
+        query<{ hour: number; total: number }>(
+          `SELECT EXTRACT(HOUR FROM verified_at)::int AS hour, COUNT(*)::int AS total
+             FROM verification_events
+            WHERE verified_at >= date_trunc('day', now())
+            GROUP BY 1
+            ORDER BY 1`,
+        ),
+        query<{
+          total: number
+          accepted: number
+          rejected: number
+          median_seconds: number | null
+        }>(
+          `SELECT COUNT(*)::int AS total,
+                  COUNT(*) FILTER (WHERE result = 'accepted')::int AS accepted,
+                  COUNT(*) FILTER (WHERE result = 'rejected')::int AS rejected,
+                  ROUND((percentile_cont(0.5) WITHIN GROUP (ORDER BY latency_ms))::numeric / 1000, 2)
+                    AS median_seconds
+             FROM verification_events
+            WHERE verified_at >= date_trunc('day', now())`,
+        ),
+      ])
+
+      return {
+        summary: summary.rows[0] ?? {
+          total: 0,
+          accepted: 0,
+          rejected: 0,
+          median_seconds: null,
+        },
+        readers: readers.rows.map((row) => ({
+          id: row.name,
+          location: row.location,
+          state: row.status === 'offline' ? 'Offline' : 'Online',
+          median_seconds: row.median_seconds === null ? null : Number(row.median_seconds),
+          checks: row.checks,
+        })),
+        hourly: hourly.rows.map((row) => ({
+          hour: row.hour,
+          total: row.total,
+        })),
       }
     },
   )

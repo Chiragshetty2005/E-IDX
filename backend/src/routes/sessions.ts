@@ -4,6 +4,7 @@ import { query } from '../db.js'
 import { verifyPass } from '../lib/pass.js'
 import { requireReaderKey } from '../plugins/auth.js'
 import { badRequest, conflict, notFound, unprocessable } from '../plugins/errors.js'
+import type { AuthUser } from '../types/fastify.js'
 
 interface SessionQuery {
   date?: string
@@ -86,10 +87,17 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
       }
       if (endsAt <= startsAt) throw badRequest('ends_at must be after starts_at.')
 
+      const actor = request.user as AuthUser
+      // A section session expects the faculty member's section, not the whole
+      // campus enrolment for the course.
+      const section = actor.role === 'faculty' ? (actor.section ?? '') : ''
       const expected = await query<{ total: number }>(
-        `SELECT COUNT(*)::int AS total FROM course_enrollments
-          WHERE course_code = $1 AND withdrawn_at IS NULL`,
-        [body.course_code],
+        `SELECT COUNT(*)::int AS total
+           FROM course_enrollments e
+           JOIN app_users u ON u.id = e.student_id
+          WHERE e.course_code = $1 AND e.withdrawn_at IS NULL
+            AND ($2 = '' OR u.section = $2)`,
+        [body.course_code, section],
       )
 
       const inserted = await query<{ id: string }>(

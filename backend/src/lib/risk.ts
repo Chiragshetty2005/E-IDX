@@ -182,6 +182,9 @@ export interface ModelContract {
   shap_group_importance: Array<{ group: string; share: number }>
   fairness_selection_gaps: Record<string, number>
   at_risk_rate: number
+  /** Read from the frozen metrics file when it is present. */
+  student_count?: number
+  brier?: number
 }
 
 let cachedContract: ModelContract | null = null
@@ -190,6 +193,28 @@ export function loadModelContract(): ModelContract | null {
   if (cachedContract) return cachedContract
   const path = fileURLToPath(new URL('../../../ml/artifacts/model_meta.json', import.meta.url))
   if (!existsSync(path)) return null
-  cachedContract = JSON.parse(readFileSync(path, 'utf8')) as ModelContract
+  const contract = JSON.parse(readFileSync(path, 'utf8')) as ModelContract
+
+  // model_meta.json keeps the deployable contract small; the evaluation
+  // metrics file also carries the student count and Brier score shown on the
+  // insights screen. Merge them when the artifacts are present.
+  const metricsPath = fileURLToPath(new URL('../../../ml/artifacts/metrics.json', import.meta.url))
+  if (existsSync(metricsPath)) {
+    try {
+      const metrics = JSON.parse(readFileSync(metricsPath, 'utf8')) as {
+        dataset?: { students?: number }
+        cross_validation?: { catboost?: { summary?: { brier?: { mean?: number } } } }
+      }
+      if (typeof metrics.dataset?.students === 'number') {
+        contract.student_count = metrics.dataset.students
+      }
+      const brier = metrics.cross_validation?.catboost?.summary?.brier?.mean
+      if (typeof brier === 'number') contract.brier = brier
+    } catch {
+      // The contract is still usable without the optional evaluation fields.
+    }
+  }
+
+  cachedContract = contract
   return cachedContract
 }

@@ -46,8 +46,10 @@ export async function insightRoutes(app: FastifyInstance): Promise<void> {
         created_at: contract.created_at_utc,
         cutoff_day: contract.cutoff_day,
         dataset_rows: contract.dataset_rows,
+        student_count: contract.student_count ?? null,
         feature_count: contract.feature_columns.length,
         at_risk_rate: contract.at_risk_rate,
+        brier: contract.brier ?? null,
         thresholds: {
           needs_support: contract.needs_support_threshold,
           watch: contract.watch_threshold,

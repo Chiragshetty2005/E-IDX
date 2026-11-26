@@ -24,7 +24,12 @@ interface CohortRow {
 export async function facultyRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('preHandler', app.requireRole(['admin', 'faculty']))
 
-  app.get('/faculty/cohort', async () => {
+  app.get<{ Querystring: { limit?: number } }>('/faculty/cohort', async (request) => {
+    const actor = request.user as AuthUser
+    // A faculty member sees the section they teach; admin sees the whole campus.
+    const section = actor.role === 'faculty' ? (actor.section ?? '') : ''
+    const limit = Math.min(500, Math.max(1, Number(request.query.limit ?? 200)))
+
     const { rows, totals } = await withStaffScope(async (client) => {
       const cohort = await client.query<CohortRow>(
         `WITH latest AS (
@@ -44,7 +49,10 @@ export async function facultyRoutes(app: FastifyInstance): Promise<void> {
            FROM app_users u
            JOIN latest l ON l.student_id = u.id
            LEFT JOIN app_users m ON m.id = u.mentor_id
-          ORDER BY l.probability DESC, u.external_id`,
+          WHERE ($2 = '' OR u.section = $2)
+          ORDER BY l.probability DESC, u.external_id
+          LIMIT $1`,
+        [limit, section],
       )
       const counts = await client.query<{
         students: number
@@ -59,13 +67,15 @@ export async function facultyRoutes(app: FastifyInstance): Promise<void> {
             ORDER BY student_id, generated_at DESC
          )
          SELECT
-           (SELECT COUNT(*)::int FROM app_users WHERE role = 'student' AND active = true) AS students,
+           COUNT(*) FILTER (WHERE u.role = 'student' AND u.active = true)::int AS students,
            COUNT(*) FILTER (WHERE l.tier = 'support')::int AS support,
            COUNT(*) FILTER (WHERE l.tier = 'watch')::int AS watch,
            COUNT(*) FILTER (WHERE l.tier = 'on-track')::int AS on_track,
            (SELECT COUNT(*)::int FROM interventions WHERE created_at >= now() - interval '30 days') AS interventions
          FROM app_users u LEFT JOIN latest l ON l.student_id = u.id
-        WHERE u.role = 'student' AND u.active = true`,
+        WHERE u.role = 'student' AND u.active = true
+          AND ($1 = '' OR u.section = $1)`,
+        [section],
       )
       return { rows: cohort.rows, totals: counts.rows[0] }
     })
