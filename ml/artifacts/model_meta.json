@@ -1,6 +1,6 @@
 {
-  "model_version": "catboost-cutoff60-20261126062250",
-  "created_at_utc": "2026-11-26T06:22:50.908540+00:00",
+  "model_version": "catboost-cutoff60-20261126065719",
+  "created_at_utc": "2026-11-26T06:57:19.914277+00:00",
   "model_file": "catboost_model.cbm",
   "logistic_file": "logistic_model.joblib",
   "feature_columns": [
@@ -126,69 +126,69 @@
     "Fail",
     "Withdrawn"
   ],
-  "needs_support_threshold": 0.9121777004280444,
-  "watch_threshold": 0.5401580952149441,
+  "needs_support_threshold": 0.9133567195762159,
+  "watch_threshold": 0.5409060177724367,
   "risk_tier_labels": {
-    "high": "needs-support",
+    "high": "support",
     "watch": "watch",
     "low": "on-track"
   },
-  "feature_table_sha256": "f2775d826b63fb91313481f130e42ba2fc1d20f4715142d835614aa71b6ed036",
+  "feature_table_sha256": "6f0be66cadbd42a04436f73bde40fbfcdd7ab1b67f56784893d5c2acf2c12551",
   "dataset_rows": 26361,
   "at_risk_rate": 0.4163726717499336,
-  "cross_validation_auc": 0.8344505096829576,
-  "cross_validation_pr_auc": 0.8151337404366125,
-  "recall_at_20pct": 0.43230685131195334,
-  "temporal_test_auc": 0.8029595697110357,
-  "temporal_test_pr_auc": 0.7560555786404033,
+  "cross_validation_auc": 0.8343775493622864,
+  "cross_validation_pr_auc": 0.8151254256206326,
+  "recall_at_20pct": 0.4313957725947522,
+  "temporal_test_auc": 0.8044018047675432,
+  "temporal_test_pr_auc": 0.757726225539371,
   "shap_group_importance": [
     {
       "group": "Assessment scores",
-      "share": 0.28295625954383224
+      "share": 0.26956410328743524
     },
     {
       "group": "Recent VLE activity",
-      "share": 0.21289438858863025
+      "share": 0.21189799791256209
     },
     {
       "group": "Module context",
-      "share": 0.15491198954394456
+      "share": 0.15153120727344827
     },
     {
       "group": "Submission timing",
-      "share": 0.1196031931589187
+      "share": 0.1154212962906361
     },
     {
       "group": "Missed assessments",
-      "share": 0.10461134296730497
+      "share": 0.10666180000829992
     },
     {
       "group": "VLE breadth",
-      "share": 0.0580708245549719
+      "share": 0.0692588311670764
     },
     {
       "group": "Total VLE engagement",
-      "share": 0.03543935737825231
+      "share": 0.045340804761549516
     },
     {
       "group": "Prior attempts",
-      "share": 0.019071038170971034
+      "share": 0.0183172272625857
     },
     {
       "group": "Credits and registration",
-      "share": 0.010043438311730312
+      "share": 0.00986496370126496
     },
     {
       "group": "Banked credit",
-      "share": 0.002398167781443511
+      "share": 0.00214176833514178
     }
   ],
   "fairness_selection_gaps": {
-    "gender": 0.05664863444788429,
-    "disability": 0.05993299658777343,
-    "age_band": 0.11696245328904444,
-    "imd_band": 0.13205619159110302,
-    "region": 0.09735228463925691,
-    "highest_education": 0.2054641886170165
+    "gender": 0.056801837869179805,
+    "disability": 0.06307025582348233,
+    "age_band": 0.11163681119876624,
+    "imd_band": 0.1322184963987381,
+    "region": 0.09840150865941033,
+    "highest_education": 0.22091485789841186
   }
 }
