@@ -2,7 +2,9 @@
 
 Fastify + TypeScript API and PostgreSQL database for the E-IDX campus card
 platform. The service stores the academic risk predictions produced by the
-local OULAD model pipeline and serves them to staff only.
+local OULAD model pipeline and serves them to staff only, and it runs the
+checkpoint based campus presence service for the school pilot and the parent
+portal.
 
 ## Stack
 
@@ -23,7 +25,7 @@ docker compose up -d          # PostgreSQL on localhost:5433
 npm install
 npm run migrate               # applies sql/*.sql in order
 npm run export:risk           # builds seed/risk_seed.json from ml/artifacts
-npm run seed                  # loads 4,786 students, cards, risk predictions
+npm run seed                  # loads 4,810 students, cards, risk predictions, presence
 npm run dev                   # http://localhost:4000
 ```
 
@@ -55,7 +57,7 @@ frozen ML artifacts, so a new model run needs `npm run export:risk` followed by
 ## Tests
 
 ```bash
-npm test          # 26 checks, including the privacy invariants
+npm test          # 36 checks, including the privacy invariants
 npm run typecheck
 ```
 
@@ -68,6 +70,21 @@ if the database is empty.
 enrolments, attendance summaries, academic profiles, attendance sessions and
 records, verification events, interventions, exams, library loans, fee
 receipts and readers.
+
+Migration `sql/004_presence_parents.sql` adds the school and presence tables:
+
+* `parent_links` — links a parent account to a child, with a relationship label.
+* `checkpoints` — named reader positions with a zone (`bus`, `gate`, `classroom`,
+  `library`, `canteen`) and a read method (`uhf`, `qr`, `nfc`).
+* `presence_events` — one row per read, with the state, zone, method, source
+  (`reader`, `simulated`, `seed`) and timestamp.
+* `notifications` — the outbox for parent messages, one row per parent and
+  child event, with a channel (`push`, `sms`) and a delivery state (`sent`,
+  `queued`).
+
+`app_users` also gains `level` (`school` or `college`), `class_label` and the
+`parent` role. `cards` gains `nfc_uid` and `uhf_tag_id` so a card can be matched
+to a checkpoint read.
 
 `risk` holds the model output:
 
@@ -107,6 +124,11 @@ These are enforced in code and covered by tests:
    returning an empty body.
 5. Raw VLE click logs are never stored. The database keeps aggregated feature
    snapshots only.
+6. Parent responses carry presence, card and notification data only. School
+   children have no risk prediction, and the privacy guard rejects a risk key in
+   any parent payload.
+7. Card update payloads for a school child carry no risk field. The privacy
+   guard scans every card update, not only the college ones.
 
 ## Endpoints
 
@@ -133,6 +155,7 @@ return to the sign-in page instead of showing stale screens.
 | GET | `/me/attendance` | Per course attendance for the signed-in student. |
 | GET | `/me/academics` | CGPA, SGPA, internal marks, assignment rate. |
 | GET | `/me/library`, `/me/exams`, `/me/fees` | Campus services, scoped to the student. |
+| GET | `/me/presence` | Latest checkpoint read for the signed-in student. Never contains risk. |
 | GET | `/me/risk` | Always `403`. Academic risk is a staff signal. |
 
 ### Staff
@@ -153,6 +176,21 @@ return to the sign-in page instead of showing stale screens.
 | GET | `/sessions?date=` | Sessions with present counts. `total_expected` is the size of the creating faculty member's section. |
 | POST | `/sessions`, `/sessions/:id/open`, `/sessions/:id/close` | Session control. Only one session stays open at a time. |
 | GET | `/insights/risk`, `/insights/model` | Tier distribution and the frozen model contract, including `student_count` and `brier`. |
+
+### Presence
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/presence/overview?level=school\|college` | Scope, summary, zone counts, student rows, today's events, headcount and checkpoints. Admin picks the scope and defaults to the school pilot; faculty are locked to their own college section. |
+| POST | `/presence/simulate` | Admin only. Writes a `presence_events` row with `source='simulated'` and raises a push (sent) and an SMS (queued) outbox row for every linked parent. |
+
+### Parents
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/parent/children` | Children linked to the signed-in parent, with their latest presence state. |
+| GET | `/parent/children/:usn` | One linked child: timeline, card and tag identifiers. An unlinked USN answers the same `404` as a missing one. |
+| GET | `/parent/alerts` | Notifications for linked children only. |
 
 ### Reader devices
 
@@ -179,8 +217,13 @@ Prediction payloads match `ml/artifacts/prediction_payload.schema.json`:
 
 ## What the seed contains
 
-* 4,786 students with the campus tier split used by the frontend preview:
-  479 support, 957 watch, 3,350 on-track.
+* 4,810 students: 4,786 college students with the campus tier split used by the
+  frontend preview (479 support, 957 watch, 3,350 on-track), plus a 24 child
+  primary school pilot (LKG to Grade 4) that is never scored.
+* 12 parent accounts with 2 children each, linked through `parent_links`.
+* 14 checkpoints across the bus stop, gates, classrooms, library and canteen.
+* About 5,064 presence reads for today with a school notification row for every
+  child event.
 * Six teaching sections. Section A is the teaching cohort used by the faculty
   screens: 62 students (the twelve named preview students plus 50 spread across
   the register by stride), 9 support, 13 watch, 40 on-track. Dr. Shahin Fatima
@@ -209,3 +252,9 @@ signs in again on the next request.
 * Academic risk is read from the database, never scored on the fly. A new
   model run needs `npm run export:risk` and `npm run seed` (or a dedicated
   ingestion job) before the API can serve it.
+* Presence reads arrive from a checkpoint reader or the admin simulator. There
+  is no GPS and no location tracking between checkpoints.
+* Notifications are stored outbox rows. The `push` channel is marked `sent` and
+  the `sms` channel `queued`, because no gateway is connected yet.
+* A passive UHF tag cannot be read by a browser, so the simulator stands in for
+  a hands-free reader and every event it writes is labelled `simulated`.

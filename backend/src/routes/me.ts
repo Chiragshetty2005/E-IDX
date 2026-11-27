@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import { query } from '../db.js'
 import { issuePass } from '../lib/pass.js'
 import { assertNoRiskFields } from '../lib/privacy.js'
+import { presenceState } from '../lib/presence.js'
 import { forbidden, notFound } from '../plugins/errors.js'
 import type { AuthUser } from '../types/fastify.js'
 import { permissionsFor, publicUser } from './auth.js'
@@ -230,5 +231,53 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
       'Academic risk is a staff signal. Students discuss flags with their mentor.',
       'risk_is_staff_only',
     )
+  })
+
+  /**
+   * The card holder's own last checkpoint read. It is the same event a parent
+   * sees, limited to the signed-in student.
+   */
+  app.get('/me/presence', async (request) => {
+    const user = request.user as AuthUser
+    if (user.role !== 'student') {
+      throw forbidden('Only card holders can read their own presence.', 'not_a_student')
+    }
+
+    const result = await query<{
+      direction: 'in' | 'out' | null
+      method: 'uhf' | 'qr' | 'nfc' | null
+      occurred_at: Date | null
+      checkpoint_code: string | null
+      checkpoint_name: string | null
+      zone: 'bus' | 'gate' | 'classroom' | 'library' | 'canteen' | null
+    }>(
+      `SELECT e.direction, e.method, e.occurred_at,
+              c.code AS checkpoint_code, c.name AS checkpoint_name, c.zone
+         FROM presence_events e
+         JOIN checkpoints c ON c.id = e.checkpoint_id
+        WHERE e.student_id = $1
+          AND e.occurred_at >= date_trunc('day', now())
+        ORDER BY e.occurred_at DESC
+        LIMIT 1`,
+      [user.id],
+    )
+    const row = result.rows[0]
+    if (!row) return { presence: null }
+
+    const state = presenceState(row)
+    const payload = {
+      presence: {
+        state: state.state,
+        state_label: state.label,
+        checkpoint:
+          row.checkpoint_code && row.checkpoint_name && row.zone
+            ? { code: row.checkpoint_code, name: row.checkpoint_name, zone: row.zone }
+            : null,
+        method: row.method,
+        occurred_at: row.occurred_at ? row.occurred_at.toISOString() : null,
+      },
+    }
+    assertNoRiskFields(payload)
+    return payload
   })
 }

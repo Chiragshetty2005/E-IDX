@@ -111,11 +111,29 @@ describe('student surfaces never carry academic risk', () => {
       '/api/v1/me/library',
       '/api/v1/me/exams',
       '/api/v1/me/fees',
+      '/api/v1/me/presence',
     ]) {
       const response = await authGet(token, url)
       assert.equal(response.statusCode, 200, url)
       assert.equal(containsRiskField(response.json()), null, url)
     }
+  })
+
+  it('gives the card holder their own last checkpoint read', async () => {
+    const token = await login('student', DEMO_STUDENT)
+    const response = await authGet(token, '/api/v1/me/presence')
+    assert.equal(response.statusCode, 200)
+    const presence = response.json().presence
+    assert.ok(presence)
+    assert.equal(presence.state, 'on-campus')
+    assert.ok(presence.checkpoint.code)
+    assert.ok(presence.occurred_at)
+  })
+
+  it('refuses the presence route to a staff account', async () => {
+    const token = await login('admin')
+    const response = await authGet(token, '/api/v1/me/presence')
+    assert.equal(response.statusCode, 403)
   })
 
   it('refuses a student facing risk endpoint explicitly', async () => {
