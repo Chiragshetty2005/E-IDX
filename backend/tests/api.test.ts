@@ -152,7 +152,7 @@ describe('staff risk surfaces', () => {
     const response = await authGet(token, '/api/v1/admin/overview')
     assert.equal(response.statusCode, 200)
     const body = response.json()
-    assert.equal(body.campus.students, 4786)
+    assert.equal(body.campus.students, 4810)
     assert.equal(body.risk.support + body.risk.watch + body.risk.on_track, 4786)
     assert.ok(body.recent_card_updates.length > 0)
   })
@@ -222,7 +222,7 @@ describe('staff risk surfaces', () => {
     assert.equal(response.statusCode, 200)
     const body = response.json()
     assert.equal(body.students.length, 5)
-    assert.equal(body.pagination.total, 4786)
+    assert.equal(body.pagination.total, 4810)
   })
 })
 
@@ -361,5 +361,117 @@ describe('mentor notes', () => {
     const note = response.json().intervention
     assert.equal(note.source, 'mentor')
     assert.ok(note.created_at)
+  })
+})
+
+describe('parent portal', () => {
+  it('returns only the children linked to the signed-in parent', async () => {
+    const token = await login('parent')
+    const response = await authGet(token, '/api/v1/parent/children')
+    assert.equal(response.statusCode, 200)
+    const children = response.json().children
+    assert.equal(children.length, 2)
+    assert.deepEqual(
+      children.map((child: { usn: string }) => child.usn).sort(),
+      ['EIDX-S-001', 'EIDX-S-002'],
+    )
+    assert.ok(children[0].card.card_uid)
+    assert.ok(children[0].presence.state)
+  })
+
+  it('refuses a child that is not linked to the parent', async () => {
+    const token = await login('parent')
+    const response = await authGet(token, '/api/v1/parent/children/EIDX-S-003')
+    assert.equal(response.statusCode, 404)
+    assert.equal(response.json().error.code, 'child_not_found')
+  })
+
+  it('keeps parent payloads free of academic risk', async () => {
+    const token = await login('parent')
+    for (const url of [
+      '/api/v1/parent/children',
+      '/api/v1/parent/children/EIDX-S-001',
+      '/api/v1/parent/alerts',
+    ]) {
+      const response = await authGet(token, url)
+      assert.equal(response.statusCode, 200, url)
+      assert.equal(containsRiskField(response.json()), null, url)
+    }
+  })
+
+  it('blocks a parent from the staff surfaces', async () => {
+    const token = await login('parent')
+    for (const url of [
+      '/api/v1/admin/overview',
+      '/api/v1/presence/overview',
+      '/api/v1/students/EIDX-S-001',
+      '/api/v1/faculty/cohort',
+    ]) {
+      const response = await authGet(token, url)
+      assert.equal(response.statusCode, 403, url)
+    }
+  })
+})
+
+describe('campus presence', () => {
+  it('summarises the school pilot for card services', async () => {
+    const token = await login('admin')
+    const response = await authGet(token, '/api/v1/presence/overview?level=school')
+    assert.equal(response.statusCode, 200)
+    const body = response.json()
+    assert.equal(body.scope.level, 'school')
+    assert.equal(body.summary.expected, 24)
+    assert.equal(body.summary.on_campus + body.summary.on_bus + body.summary.left_campus + body.summary.not_arrived, 24)
+    assert.ok(body.summary.alerts_today > 0)
+    assert.equal(body.students.length, 24)
+    assert.ok(body.events.length > 0)
+    assert.ok(body.checkpoints.some((checkpoint: { code: string }) => checkpoint.code === 'BUS-01'))
+  })
+
+  it('scopes faculty presence to the section they teach', async () => {
+    const token = await login('faculty')
+    const response = await authGet(token, '/api/v1/presence/overview?level=school')
+    assert.equal(response.statusCode, 200)
+    const body = response.json()
+    assert.equal(body.scope.level, 'college')
+    assert.equal(body.scope.section, 'Section A')
+    assert.equal(body.summary.expected, 62)
+  })
+
+  it('emits a simulated checkpoint read and alerts the linked parent', async () => {
+    const adminToken = await login('admin')
+    const simulated = await authPost(adminToken, '/api/v1/presence/simulate', {
+      student_usn: 'EIDX-S-002',
+      checkpoint_code: 'SCHOOL-GATE',
+      direction: 'out',
+      method: 'uhf',
+    })
+    assert.equal(simulated.statusCode, 201)
+    const event = simulated.json().event
+    assert.equal(event.source, 'simulated')
+    assert.equal(event.simulated, true)
+    assert.ok(simulated.json().notification.recipients >= 2)
+
+    const parentToken = await login('parent')
+    const alerts = await authGet(parentToken, '/api/v1/parent/alerts')
+    assert.equal(alerts.statusCode, 200)
+    const rows = alerts.json().alerts
+    assert.ok(rows.some((row: { message: string }) => row.message.includes('Diya left campus')))
+
+    const child = await authGet(parentToken, '/api/v1/parent/children/EIDX-S-002')
+    assert.equal(child.statusCode, 200)
+    assert.equal(child.json().child.presence.state, 'left')
+  })
+
+  it('refuses a simulated read for a checkpoint on another campus level', async () => {
+    const token = await login('admin')
+    const response = await authPost(token, '/api/v1/presence/simulate', {
+      student_usn: 'EIDX-S-002',
+      checkpoint_code: 'BLOCK-C',
+      direction: 'in',
+      method: 'uhf',
+    })
+    assert.equal(response.statusCode, 400)
+    assert.equal(response.json().error.code, 'checkpoint_level_mismatch')
   })
 })

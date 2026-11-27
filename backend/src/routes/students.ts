@@ -16,6 +16,8 @@ interface ListQuery {
 interface StudentListRow {
   usn: string
   full_name: string
+  level: 'school' | 'college'
+  class_label: string | null
   programme: string | null
   semester: string | null
   section: string | null
@@ -47,7 +49,8 @@ export async function studentsRoutes(app: FastifyInstance): Promise<void> {
           AND ($1 = '' OR u.full_name ILIKE '%' || $1 || '%' OR u.external_id ILIKE '%' || $1 || '%')
           AND ($2 = '' OR c.status = $2 OR latest.tier = $2)`
       const list = await client.query<StudentListRow>(
-        `SELECT u.external_id AS usn, u.full_name, u.programme, u.semester, u.section,
+        `SELECT u.external_id AS usn, u.full_name, u.level, u.class_label,
+                u.programme, u.semester, u.section,
                 c.card_uid, c.status AS card_status, c.battery, c.last_sync_at, c.valid_to,
                 latest.probability AS risk_probability, latest.tier AS risk_tier,
                 latest.course_code, m.full_name AS mentor_name
@@ -84,6 +87,8 @@ export async function studentsRoutes(app: FastifyInstance): Promise<void> {
       students: rows.map((row) => ({
         usn: row.usn,
         name: row.full_name,
+        level: row.level,
+        class_label: row.class_label,
         programme: row.programme,
         semester: row.semester,
         section: row.section,
@@ -97,13 +102,14 @@ export async function studentsRoutes(app: FastifyInstance): Promise<void> {
               valid_to: row.valid_to ? row.valid_to.toISOString() : null,
             }
           : null,
-        risk: row.risk_tier
-          ? {
-              tier: row.risk_tier,
-              probability: row.risk_probability,
-              module_ref: row.course_code,
-            }
-          : null,
+        risk:
+          row.level === 'college' && row.risk_tier
+            ? {
+                tier: row.risk_tier,
+                probability: row.risk_probability,
+                module_ref: row.course_code,
+              }
+            : null,
       })),
       pagination: {
         page,
@@ -121,6 +127,8 @@ export async function studentsRoutes(app: FastifyInstance): Promise<void> {
       usn: string
       full_name: string
       email: string | null
+      level: 'school' | 'college'
+      class_label: string | null
       programme: string | null
       semester: string | null
       section: string | null
@@ -133,7 +141,8 @@ export async function studentsRoutes(app: FastifyInstance): Promise<void> {
       library_visits: number | null
       sgpa: unknown
     }>(
-      `SELECT u.id, u.external_id AS usn, u.full_name, u.email, u.programme, u.semester, u.section,
+      `SELECT u.id, u.external_id AS usn, u.full_name, u.email, u.level, u.class_label,
+              u.programme, u.semester, u.section,
               m.full_name AS mentor_name,
               p.cgpa, p.backlogs, p.internal_marks, p.internal_max,
               p.assignment_rate, p.library_visits, p.sgpa
@@ -158,9 +167,11 @@ export async function studentsRoutes(app: FastifyInstance): Promise<void> {
         last_sync_at: Date | null
         revoked_at: Date | null
         revoke_reason: string | null
+        nfc_uid: string | null
+        uhf_tag_id: string | null
       }>(
         `SELECT id, card_uid, status, battery, firmware, valid_from, valid_to,
-                last_sync_at, revoked_at, revoke_reason
+                last_sync_at, revoked_at, revoke_reason, nfc_uid, uhf_tag_id
            FROM cards WHERE student_id = $1`,
         [student.id],
       ),
@@ -189,6 +200,8 @@ export async function studentsRoutes(app: FastifyInstance): Promise<void> {
         usn: student.usn,
         name: student.full_name,
         email: student.email,
+        level: student.level,
+        class_label: student.class_label,
         programme: student.programme,
         semester: student.semester,
         section: student.section,
@@ -221,6 +234,8 @@ export async function studentsRoutes(app: FastifyInstance): Promise<void> {
               last_sync_at: cardRow.last_sync_at ? cardRow.last_sync_at.toISOString() : null,
               revoked_at: cardRow.revoked_at ? cardRow.revoked_at.toISOString() : null,
               revoke_reason: cardRow.revoke_reason,
+              nfc_uid: cardRow.nfc_uid,
+              uhf_tag_id: cardRow.uhf_tag_id,
             }
           : null,
         interventions: interventions.rows.map((row) => ({

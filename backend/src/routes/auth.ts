@@ -15,6 +15,7 @@ const PERMISSIONS: Record<Role, string[]> = {
     'exams:read',
     'fees:read',
   ],
+  parent: ['child:read', 'presence:read', 'alerts:read'],
   faculty: [
     'cohort:read',
     'student:read',
@@ -24,6 +25,7 @@ const PERMISSIONS: Record<Role, string[]> = {
     'session:write',
     'verification:read',
     'insights:read',
+    'presence:read',
   ],
   admin: [
     'cohort:read',
@@ -37,6 +39,8 @@ const PERMISSIONS: Record<Role, string[]> = {
     'card:update',
     'overview:read',
     'user:read',
+    'presence:read',
+    'presence:simulate',
   ],
 }
 
@@ -50,6 +54,8 @@ export function publicUser(user: AuthUser) {
     name: user.fullName,
     email: user.email,
     role: user.role,
+    level: user.level,
+    class_label: user.classLabel,
     programme: user.programme,
     semester: user.semester,
     section: user.section,
@@ -72,8 +78,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       throw notFound('Preview sign-in is disabled on this deployment.', 'preview_disabled')
     }
     const role = request.body?.role
-    if (!role || !['admin', 'faculty', 'student'].includes(role)) {
-      throw badRequest('role must be one of admin, faculty or student.')
+    if (!role || !['admin', 'faculty', 'parent', 'student'].includes(role)) {
+      throw badRequest('role must be one of admin, faculty, parent or student.')
     }
     const usn = request.body?.usn?.trim()
 
@@ -84,12 +90,15 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           full_name: string
           email: string | null
           role: Role
+          level: 'school' | 'college'
+          class_label: string | null
           programme: string | null
           semester: string | null
           section: string | null
           mentor_id: string | null
         }>(
-          `SELECT id, external_id, full_name, email, role, programme, semester, section, mentor_id
+          `SELECT id, external_id, full_name, email, role, level, class_label,
+                  programme, semester, section, mentor_id
              FROM app_users WHERE external_id = $1 AND role = $2 AND active = true`,
           [usn, role],
         )
@@ -99,12 +108,15 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           full_name: string
           email: string | null
           role: Role
+          level: 'school' | 'college'
+          class_label: string | null
           programme: string | null
           semester: string | null
           section: string | null
           mentor_id: string | null
         }>(
-          `SELECT id, external_id, full_name, email, role, programme, semester, section, mentor_id
+          `SELECT id, external_id, full_name, email, role, level, class_label,
+                  programme, semester, section, mentor_id
              FROM app_users WHERE role = $1 AND active = true ORDER BY created_at LIMIT 1`,
           [role],
         )
@@ -129,6 +141,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         name: row.full_name,
         email: row.email,
         role: row.role,
+        level: row.level,
+        class_label: row.class_label,
         programme: row.programme,
         semester: row.semester,
         section: row.section,

@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url'
 
 import pg from 'pg'
 
+import { notificationCopy } from '../src/lib/presence.js'
 import { config } from '../src/config.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -269,6 +270,101 @@ const DEMO_STUDENTS: DemoStudent[] = [
   },
 ]
 
+const SCHOOL_CLASSES = ['LKG', 'UKG', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4'] as const
+
+interface SchoolChild {
+  usn: string
+  name: string
+  classLabel: (typeof SCHOOL_CLASSES)[number]
+  parentIndex: number
+}
+
+/**
+ * The deck's primary audience is pre-KG to Grade 4. These 24 children form a
+ * small school pilot alongside the college register; each pair of siblings
+ * shares one parent account.
+ */
+const SCHOOL_CHILDREN: SchoolChild[] = [
+  { usn: 'EIDX-S-001', name: 'Aarav Menon', classLabel: 'LKG', parentIndex: 0 },
+  { usn: 'EIDX-S-002', name: 'Diya Menon', classLabel: 'LKG', parentIndex: 0 },
+  { usn: 'EIDX-S-003', name: 'Vihaan Rao', classLabel: 'LKG', parentIndex: 1 },
+  { usn: 'EIDX-S-004', name: 'Anika Rao', classLabel: 'LKG', parentIndex: 1 },
+  { usn: 'EIDX-S-005', name: 'Advik Sharma', classLabel: 'UKG', parentIndex: 2 },
+  { usn: 'EIDX-S-006', name: 'Myra Sharma', classLabel: 'UKG', parentIndex: 2 },
+  { usn: 'EIDX-S-007', name: 'Kabir Iyer', classLabel: 'UKG', parentIndex: 3 },
+  { usn: 'EIDX-S-008', name: 'Sara Iyer', classLabel: 'UKG', parentIndex: 3 },
+  { usn: 'EIDX-S-009', name: 'Reyansh Gupta', classLabel: 'Grade 1', parentIndex: 4 },
+  { usn: 'EIDX-S-010', name: 'Aadhya Gupta', classLabel: 'Grade 1', parentIndex: 4 },
+  { usn: 'EIDX-S-011', name: 'Dhruv Nair', classLabel: 'Grade 1', parentIndex: 5 },
+  { usn: 'EIDX-S-012', name: 'Kiara Nair', classLabel: 'Grade 1', parentIndex: 5 },
+  { usn: 'EIDX-S-013', name: 'Arnav Hegde', classLabel: 'Grade 2', parentIndex: 6 },
+  { usn: 'EIDX-S-014', name: 'Ira Hegde', classLabel: 'Grade 2', parentIndex: 6 },
+  { usn: 'EIDX-S-015', name: 'Vivaan Shetty', classLabel: 'Grade 2', parentIndex: 7 },
+  { usn: 'EIDX-S-016', name: 'Anaya Shetty', classLabel: 'Grade 2', parentIndex: 7 },
+  { usn: 'EIDX-S-017', name: 'Ishaan Kamath', classLabel: 'Grade 3', parentIndex: 8 },
+  { usn: 'EIDX-S-018', name: 'Naisha Kamath', classLabel: 'Grade 3', parentIndex: 8 },
+  { usn: 'EIDX-S-019', name: 'Aryan Gowda', classLabel: 'Grade 3', parentIndex: 9 },
+  { usn: 'EIDX-S-020', name: 'Mysha Gowda', classLabel: 'Grade 3', parentIndex: 9 },
+  { usn: 'EIDX-S-021', name: 'Krish Patel', classLabel: 'Grade 4', parentIndex: 10 },
+  { usn: 'EIDX-S-022', name: 'Riya Patel', classLabel: 'Grade 4', parentIndex: 10 },
+  { usn: 'EIDX-S-023', name: 'Ayaan Khan', classLabel: 'Grade 4', parentIndex: 11 },
+  { usn: 'EIDX-S-024', name: 'Zara Khan', classLabel: 'Grade 4', parentIndex: 11 },
+]
+
+interface ParentAccount {
+  externalId: string
+  name: string
+  relationship: string
+}
+
+const PARENTS: ParentAccount[] = [
+  { externalId: 'PAR-0001', name: 'Rohit Menon', relationship: 'Father' },
+  { externalId: 'PAR-0002', name: 'Sneha Rao', relationship: 'Mother' },
+  { externalId: 'PAR-0003', name: 'Pooja Sharma', relationship: 'Mother' },
+  { externalId: 'PAR-0004', name: 'Arun Iyer', relationship: 'Father' },
+  { externalId: 'PAR-0005', name: 'Neha Gupta', relationship: 'Mother' },
+  { externalId: 'PAR-0006', name: 'Suresh Nair', relationship: 'Father' },
+  { externalId: 'PAR-0007', name: 'Deepa Hegde', relationship: 'Mother' },
+  { externalId: 'PAR-0008', name: 'Ramesh Shetty', relationship: 'Father' },
+  { externalId: 'PAR-0009', name: 'Priya Kamath', relationship: 'Mother' },
+  { externalId: 'PAR-0010', name: 'Manjunath Gowda', relationship: 'Father' },
+  { externalId: 'PAR-0011', name: 'Nirav Patel', relationship: 'Father' },
+  { externalId: 'PAR-0012', name: 'Imran Khan', relationship: 'Father' },
+]
+
+interface CheckpointSeed {
+  code: string
+  name: string
+  zone: 'bus' | 'gate' | 'classroom' | 'library' | 'canteen'
+  level: 'school' | 'college'
+}
+
+const CHECKPOINTS: CheckpointSeed[] = [
+  { code: 'BUS-01', name: 'Bus 01 door', zone: 'bus', level: 'school' },
+  { code: 'SCHOOL-GATE', name: 'Junior school gate', zone: 'gate', level: 'school' },
+  { code: 'CLASS-LKG', name: 'LKG classroom', zone: 'classroom', level: 'school' },
+  { code: 'CLASS-UKG', name: 'UKG classroom', zone: 'classroom', level: 'school' },
+  { code: 'CLASS-G1', name: 'Grade 1 classroom', zone: 'classroom', level: 'school' },
+  { code: 'CLASS-G2', name: 'Grade 2 classroom', zone: 'classroom', level: 'school' },
+  { code: 'CLASS-G3', name: 'Grade 3 classroom', zone: 'classroom', level: 'school' },
+  { code: 'CLASS-G4', name: 'Grade 4 classroom', zone: 'classroom', level: 'school' },
+  { code: 'LIB-JR', name: 'Junior library', zone: 'library', level: 'school' },
+  { code: 'CANTEEN-JR', name: 'Junior canteen', zone: 'canteen', level: 'school' },
+  { code: 'CAMPUS-GATE', name: 'Campus main gate', zone: 'gate', level: 'college' },
+  { code: 'BLOCK-C', name: 'Block C classroom', zone: 'classroom', level: 'college' },
+  { code: 'LIB-MAIN', name: 'Main library', zone: 'library', level: 'college' },
+  { code: 'CANTEEN-MAIN', name: 'Main canteen', zone: 'canteen', level: 'college' },
+]
+
+const CLASS_CHECKPOINT: Record<string, string> = {
+  LKG: 'CLASS-LKG',
+  UKG: 'CLASS-UKG',
+  'Grade 1': 'CLASS-G1',
+  'Grade 2': 'CLASS-G2',
+  'Grade 3': 'CLASS-G3',
+  'Grade 4': 'CLASS-G4',
+}
+
 const FIRST_NAMES = [
   'Aarav', 'Diya', 'Ishaan', 'Kavya', 'Manish', 'Nivedita', 'Ritesh', 'Sanjana',
   'Tanvi', 'Varun', 'Yash', 'Zoya', 'Bharath', 'Chitra', 'Deepak', 'Eshita',
@@ -385,7 +481,8 @@ async function main(): Promise<void> {
       TRUNCATE app_users, auth_sessions, cards, card_updates, course_enrollments,
         course_attendance_summary, student_academic_profiles, attendance_sessions,
         attendance_records, verification_events, interventions, readers, exam_schedule,
-        library_loans, fee_receipts, risk.feature_snapshots, risk.predictions
+        library_loans, fee_receipts, parent_links, checkpoints, presence_events,
+        notifications, risk.feature_snapshots, risk.predictions
       RESTART IDENTITY CASCADE
     `)
 
@@ -416,6 +513,73 @@ async function main(): Promise<void> {
         createHash('sha256').update(config.readerApiKey).digest('hex'),
         'online',
       ]),
+    )
+
+    await insertMany(
+      client,
+      'checkpoints',
+      ['id', 'code', 'name', 'zone', 'level'],
+      CHECKPOINTS.map((checkpoint) => [
+        uuidV5(`checkpoint:${checkpoint.code}`),
+        checkpoint.code,
+        checkpoint.name,
+        checkpoint.zone,
+        checkpoint.level,
+      ]),
+    )
+
+    // ------------------------------------------------------- parents & children
+    await insertMany(
+      client,
+      'app_users',
+      ['id', 'external_id', 'full_name', 'email', 'role', 'programme', 'semester', 'section'],
+      PARENTS.map((parent) => [
+        uuidV5(`user:${parent.externalId}`),
+        parent.externalId,
+        parent.name,
+        `${parent.externalId.toLowerCase()}@example.com`,
+        'parent',
+        null,
+        null,
+        null,
+      ]),
+    )
+
+    const schoolIds = new Map(
+      SCHOOL_CHILDREN.map((child) => [child.usn, uuidV5(`user:${child.usn}`)]),
+    )
+    await insertMany(
+      client,
+      'app_users',
+      ['id', 'external_id', 'full_name', 'email', 'role', 'level', 'class_label', 'programme', 'semester', 'section'],
+      SCHOOL_CHILDREN.map((child) => [
+        schoolIds.get(child.usn) as string,
+        child.usn,
+        child.name,
+        `${child.usn.toLowerCase()}@school.eidx.edu`,
+        'student',
+        'school',
+        child.classLabel,
+        'Primary school',
+        child.classLabel,
+        `${child.classLabel} A`,
+      ]),
+    )
+
+    await insertMany(
+      client,
+      'parent_links',
+      ['id', 'parent_id', 'student_id', 'relationship', 'primary_contact'],
+      SCHOOL_CHILDREN.map((child, index) => {
+        const parent = PARENTS[child.parentIndex] as ParentAccount
+        return [
+          uuidV5(`parent-link:${parent.externalId}:${child.usn}`),
+          uuidV5(`user:${parent.externalId}`),
+          schoolIds.get(child.usn) as string,
+          parent.relationship,
+          index % 2 === 0,
+        ]
+      }),
     )
 
     // ------------------------------------------------------------- students
@@ -579,6 +743,8 @@ async function main(): Promise<void> {
         'last_sync_at',
         'revoked_at',
         'revoke_reason',
+        'nfc_uid',
+        'uhf_tag_id',
       ],
       seeded.map((student) => [
         student.cardId,
@@ -592,6 +758,39 @@ async function main(): Promise<void> {
         minutesAgo(student.lastSyncMinutes),
         student.cardStatus === 'revoked' ? minutesAgo(1440) : null,
         student.cardStatus === 'revoked' ? 'Reported lost at the card office' : null,
+        `NFC-${student.usn.slice(-6)}`,
+        `UHF-7F3A-${student.usn.slice(-4)}`,
+      ]),
+    )
+
+    await insertMany(
+      client,
+      'cards',
+      [
+        'id',
+        'student_id',
+        'card_uid',
+        'status',
+        'battery',
+        'firmware',
+        'valid_from',
+        'valid_to',
+        'last_sync_at',
+        'nfc_uid',
+        'uhf_tag_id',
+      ],
+      SCHOOL_CHILDREN.map((child, index) => [
+        uuidV5(`card:${child.usn}`),
+        schoolIds.get(child.usn) as string,
+        child.usn,
+        'active',
+        82 + ((index * 7) % 17),
+        '1.4.2',
+        new Date('2026-07-01T00:00:00Z'),
+        new Date('2027-06-30T23:59:59Z'),
+        minutesAgo(4 + index * 9),
+        `NFC-S-${String(index + 1).padStart(4, '0')}`,
+        `UHF-7F3A-S${String(index + 1).padStart(3, '0')}`,
       ]),
     )
 
@@ -867,6 +1066,171 @@ async function main(): Promise<void> {
       }),
     )
 
+    // ------------------------------------------------------ presence & alerts
+    const presenceRows: Param[][] = []
+    const notificationRows: Param[][] = []
+    const checkpointByCode = new Map(CHECKPOINTS.map((checkpoint) => [checkpoint.code, checkpoint]))
+    const checkpointId = (code: string) => uuidV5(`checkpoint:${code}`)
+
+    const addPresence = (
+      key: string,
+      studentId: string,
+      code: string,
+      direction: 'in' | 'out',
+      method: 'uhf' | 'qr' | 'nfc',
+      occurredAt: Date,
+    ) => {
+      presenceRows.push([
+        uuidV5(`presence:${key}`),
+        studentId,
+        checkpointId(code),
+        direction,
+        method,
+        'seed',
+        occurredAt,
+      ])
+    }
+
+    const addAlerts = (
+      key: string,
+      child: SchoolChild,
+      direction: 'in' | 'out',
+      code: string,
+      occurredAt: Date,
+    ) => {
+      const checkpoint = checkpointByCode.get(code)
+      if (!checkpoint) return
+      const copy = notificationCopy(child.name, checkpoint, direction, occurredAt)
+      const parent = PARENTS[child.parentIndex] as ParentAccount
+      for (const channel of ['push', 'sms'] as const) {
+        const status: 'sent' | 'queued' | 'failed' =
+          channel === 'push'
+            ? 'sent'
+            : random() > 0.94
+              ? 'failed'
+              : random() > 0.88
+                ? 'queued'
+                : 'sent'
+        notificationRows.push([
+          uuidV5(`notification:${key}:${channel}`),
+          uuidV5(`user:${parent.externalId}`),
+          schoolIds.get(child.usn) as string,
+          uuidV5(`presence:${key}`),
+          channel,
+          status,
+          copy.title,
+          copy.message,
+          occurredAt,
+          status === 'sent' ? new Date(occurredAt.getTime() + 4000) : null,
+        ])
+      }
+    }
+
+    SCHOOL_CHILDREN.forEach((child, index) => {
+      const childId = schoolIds.get(child.usn) as string
+      // One child has not reached campus yet.
+      if (index === 23) return
+
+      const busKey = `${child.usn}:bus-in`
+      const busAt = minutesAgo(390 + index * 3)
+      addPresence(busKey, childId, 'BUS-01', 'in', 'uhf', busAt)
+      addAlerts(busKey, child, 'in', 'BUS-01', busAt)
+
+      // One child is still on the bus; the rest have entered the gate.
+      if (index === 20) return
+
+      const gateKey = `${child.usn}:gate-in`
+      const gateAt = minutesAgo(355 + index * 3)
+      addPresence(gateKey, childId, 'SCHOOL-GATE', 'in', 'uhf', gateAt)
+      addAlerts(gateKey, child, 'in', 'SCHOOL-GATE', gateAt)
+
+      const classKey = `${child.usn}:class-in`
+      const classAt = minutesAgo(320 + index * 3)
+      const classCode = CLASS_CHECKPOINT[child.classLabel] as string
+      addPresence(classKey, childId, classCode, 'in', 'uhf', classAt)
+      addAlerts(classKey, child, 'in', classCode, classAt)
+
+      if (index % 5 === 0) {
+        const libraryAt = minutesAgo(150 + (index % 4) * 7)
+        const libraryKey = `${child.usn}:library-in`
+        addPresence(libraryKey, childId, 'LIB-JR', 'in', 'uhf', libraryAt)
+        addAlerts(libraryKey, child, 'in', 'LIB-JR', libraryAt)
+      }
+
+      if (index % 7 === 0) {
+        const canteenAt = minutesAgo(95 + (index % 3) * 6)
+        const canteenKey = `${child.usn}:canteen-in`
+        addPresence(canteenKey, childId, 'CANTEEN-JR', 'in', 'uhf', canteenAt)
+        addAlerts(canteenKey, child, 'in', 'CANTEEN-JR', canteenAt)
+      }
+
+      // Two children have already been picked up.
+      if (index >= 21) {
+        const exitKey = `${child.usn}:gate-out`
+        const exitAt = minutesAgo(index === 21 ? 70 : 48)
+        addPresence(exitKey, childId, 'SCHOOL-GATE', 'out', 'uhf', exitAt)
+        addAlerts(exitKey, child, 'out', 'SCHOOL-GATE', exitAt)
+      }
+    })
+
+    // College presence keeps the campus view coherent for staff. The register
+    // is large, so most students get a single gate read, while Section A also
+    // gets a classroom read.
+    seeded.forEach((student, index) => {
+      if (random() < 0.02) return
+      const gateAt = minutesAgo(300 + Math.floor(random() * 120))
+      addPresence(`college:${student.usn}:gate-in`, student.id, 'CAMPUS-GATE', 'in', 'uhf', gateAt)
+      if (random() < 0.05) {
+        const exitAt = minutesAgo(30 + Math.floor(random() * 120))
+        addPresence(`college:${student.usn}:gate-out`, student.id, 'CAMPUS-GATE', 'out', 'uhf', exitAt)
+      } else if (cohortIds.has(student.id) && random() < 0.8) {
+        const classAt = minutesAgo(45 + Math.floor(random() * 90))
+        addPresence(`college:${student.usn}:class-in`, student.id, 'BLOCK-C', 'in', 'nfc', classAt)
+      }
+      if (index % 300 === 0) {
+        addPresence(
+          `college:${student.usn}:library-in`,
+          student.id,
+          'LIB-MAIN',
+          'in',
+          'qr',
+          minutesAgo(40 + Math.floor(random() * 80)),
+        )
+      }
+    })
+
+    await insertMany(
+      client,
+      'presence_events',
+      [
+        'id',
+        'student_id',
+        'checkpoint_id',
+        'direction',
+        'method',
+        'source',
+        'occurred_at',
+      ],
+      presenceRows,
+    )
+    await insertMany(
+      client,
+      'notifications',
+      [
+        'id',
+        'parent_id',
+        'student_id',
+        'event_id',
+        'channel',
+        'status',
+        'title',
+        'message',
+        'created_at',
+        'sent_at',
+      ],
+      notificationRows,
+    )
+
     // --------------------------------------------------------- interventions
     const interventionRows: Param[][] = []
     let interventionIndex = 0
@@ -906,14 +1270,26 @@ async function main(): Promise<void> {
     throw error
   }
 
-  const counts = await client.query<{ students: number; predictions: number }>(
+  const counts = await client.query<{
+    students: number
+    school: number
+    parents: number
+    predictions: number
+    presence: number
+  }>(
     `SELECT (SELECT COUNT(*)::int FROM app_users WHERE role = 'student') AS students,
-            (SELECT COUNT(*)::int FROM risk.predictions) AS predictions`,
+            (SELECT COUNT(*)::int FROM app_users WHERE role = 'student' AND level = 'school') AS school,
+            (SELECT COUNT(*)::int FROM app_users WHERE role = 'parent') AS parents,
+            (SELECT COUNT(*)::int FROM risk.predictions) AS predictions,
+            (SELECT COUNT(*)::int FROM presence_events) AS presence`,
   )
   await client.end()
 
   console.log(
-    `[seed] done: ${counts.rows[0]?.students ?? 0} students, ${counts.rows[0]?.predictions ?? 0} risk predictions`,
+    `[seed] done: ${counts.rows[0]?.students ?? 0} students ` +
+      `(${counts.rows[0]?.school ?? 0} school pilot), ${counts.rows[0]?.parents ?? 0} parents, ` +
+      `${counts.rows[0]?.presence ?? 0} presence reads, ` +
+      `${counts.rows[0]?.predictions ?? 0} risk predictions`,
   )
 }
 

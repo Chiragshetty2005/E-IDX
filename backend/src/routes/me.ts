@@ -18,6 +18,8 @@ interface CardRow {
   last_sync_at: Date | null
   revoked_at: Date | null
   revoke_reason: string | null
+  nfc_uid: string | null
+  uhf_tag_id: string | null
 }
 
 function cardView(row: CardRow) {
@@ -32,6 +34,8 @@ function cardView(row: CardRow) {
     last_sync_at: row.last_sync_at ? row.last_sync_at.toISOString() : null,
     revoked_at: row.revoked_at ? row.revoked_at.toISOString() : null,
     revoke_reason: row.revoke_reason,
+    nfc_uid: row.nfc_uid,
+    uhf_tag_id: row.uhf_tag_id,
   }
 }
 
@@ -50,7 +54,7 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
     }
     const result = await query<CardRow>(
       `SELECT id, card_uid, status, battery, firmware, valid_from, valid_to,
-              last_sync_at, revoked_at, revoke_reason
+              last_sync_at, revoked_at, revoke_reason, nfc_uid, uhf_tag_id
          FROM cards WHERE student_id = $1`,
       [user.id],
     )
@@ -66,7 +70,7 @@ export async function meRoutes(app: FastifyInstance): Promise<void> {
     }
     const result = await query<CardRow>(
       `SELECT id, card_uid, status, battery, firmware, valid_from, valid_to,
-              last_sync_at, revoked_at, revoke_reason
+              last_sync_at, revoked_at, revoke_reason, nfc_uid, uhf_tag_id
          FROM cards WHERE student_id = $1`,
       [user.id],
     )

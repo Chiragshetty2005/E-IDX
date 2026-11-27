@@ -49,6 +49,8 @@ interface SessionRow {
   full_name: string
   email: string | null
   role: Role
+  level: 'school' | 'college'
+  class_label: string | null
   programme: string | null
   semester: string | null
   section: string | null
@@ -58,7 +60,7 @@ interface SessionRow {
 export async function resolveSession(token: string): Promise<AuthUser | null> {
   const result = await query<SessionRow>(
     `SELECT u.id, u.external_id, u.full_name, u.email, u.role,
-            u.programme, u.semester, u.section, u.mentor_id
+            u.level, u.class_label, u.programme, u.semester, u.section, u.mentor_id
        FROM auth_sessions s
        JOIN app_users u ON u.id = s.user_id
       WHERE s.token_hash = $1
@@ -75,6 +77,8 @@ export async function resolveSession(token: string): Promise<AuthUser | null> {
     fullName: row.full_name,
     email: row.email,
     role: row.role,
+    level: row.level,
+    classLabel: row.class_label,
     programme: row.programme,
     semester: row.semester,
     section: row.section,

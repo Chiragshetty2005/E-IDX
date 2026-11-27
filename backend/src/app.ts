@@ -9,6 +9,8 @@ import { authRoutes } from './routes/auth.js'
 import { facultyRoutes } from './routes/faculty.js'
 import { insightRoutes } from './routes/insights.js'
 import { meRoutes } from './routes/me.js'
+import { parentRoutes } from './routes/parent.js'
+import { presenceRoutes } from './routes/presence.js'
 import { sessionRoutes } from './routes/sessions.js'
 import { studentsRoutes } from './routes/students.js'
 import { verificationRoutes } from './routes/verifications.js'
@@ -39,9 +41,11 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
     async (api) => {
       api.register(authRoutes)
       api.register(meRoutes)
+      api.register(parentRoutes)
       api.register(adminRoutes)
       api.register(studentsRoutes)
       api.register(facultyRoutes)
+      api.register(presenceRoutes)
       api.register(verificationRoutes)
       api.register(sessionRoutes)
       api.register(insightRoutes)

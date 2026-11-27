@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 
-export type Role = 'admin' | 'faculty' | 'student'
+export type Role = 'admin' | 'faculty' | 'parent' | 'student'
 
 export interface AuthUser {
   id: string
@@ -8,6 +8,8 @@ export interface AuthUser {
   fullName: string
   email: string | null
   role: Role
+  level: 'school' | 'college'
+  classLabel: string | null
   programme: string | null
   semester: string | null
   section: string | null
