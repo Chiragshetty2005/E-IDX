@@ -224,7 +224,7 @@ export function SignIn() {
                 spellCheck={false}
               />
               <p className="mt-2 caption-5 text-ink-500">
-                Leave the field empty to use the first student account in the register.
+                Leave the field empty to open the demo student account.
               </p>
             </div>
           ) : (
