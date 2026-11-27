@@ -203,6 +203,7 @@ export function CardStudio() {
           <EInkCard
             student={holder}
             view={view}
+            size="compact"
             programme={programme}
             validTo={validity}
             refreshing={refreshing}

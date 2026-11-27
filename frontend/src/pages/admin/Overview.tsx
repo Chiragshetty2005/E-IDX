@@ -59,10 +59,10 @@ export function AdminOverview() {
             </p>
           </div>
           <div className="sm:px-6">
-            <dt className="caption-5 text-ink-500">Awaiting sync</dt>
-            <dd className="mt-1 font-mono heading-4 tabular-nums">{campus.awaitingSync}</dd>
+            <dt className="caption-5 text-ink-500">Queued for next wake</dt>
+            <dd className="mt-1 font-mono heading-4 tabular-nums">{campus.cardsInSync}</dd>
             <p className="mt-1 caption-5 text-ink-500">
-              {campus.cardsInSync} queued for the next wake
+              {campus.awaitingSync} cards not synced in 24 hours
             </p>
           </div>
           <div className="sm:px-6">
@@ -174,20 +174,36 @@ export function AdminOverview() {
               }
             />
             <ul className="mt-2">
-              {attention.map((student) => (
-                <li
-                  key={student.usn}
-                  className="flex items-center justify-between gap-3 border-b border-paper-200 py-3 last:border-b-0"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate body-5">{student.name}</p>
-                    <p className="mt-0.5 font-mono caption-5 text-ink-500">
-                      {student.card.id}, {attentionNotes[student.card.status] ?? ''}
-                    </p>
-                  </div>
-                  <CardStatusPill status={student.card.status} />
-                </li>
-              ))}
+              {attention.map((student) => {
+                // An active card can still need attention when it has not
+                // synced for a day; show why it is in this list.
+                const stale = student.card.status === 'active'
+                const note = stale
+                  ? student.card.lastSync === 'Never'
+                    ? 'No card sync recorded'
+                    : `Last card sync ${student.card.lastSync}`
+                  : attentionNotes[student.card.status] ?? ''
+
+                return (
+                  <li
+                    key={student.usn}
+                    className="flex items-center justify-between gap-3 border-b border-paper-200 py-3 last:border-b-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate body-5">{student.name}</p>
+                      <p className="mt-0.5 font-mono caption-5 text-ink-500">
+                        {student.card.id}
+                        {note ? `, ${note}` : ''}
+                      </p>
+                    </div>
+                    {stale ? (
+                      <Pill label="Sync overdue" tone="attention" />
+                    ) : (
+                      <CardStatusPill status={student.card.status} />
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           </section>
         </div>
