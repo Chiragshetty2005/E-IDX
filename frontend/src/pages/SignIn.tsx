@@ -114,11 +114,15 @@ export function SignIn() {
   return (
     <div className="flex min-h-dvh flex-col bg-paper-50">
       <header className="mx-auto w-full max-w-xl px-5 pt-6 sm:px-8 sm:pt-8">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-paper-200 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-paper-200 pb-4">
           <Wordmark />
-          <p className="caption-5 text-ink-500">
-            Dayananda Sagar University · School of Engineering
-          </p>
+          <img
+            src="/dsu-soe-logo.jpeg"
+            alt="Dayananda Sagar University, School of Engineering"
+            width={691}
+            height={222}
+            className="h-auto w-[170px] shrink-0 mix-blend-multiply sm:w-[210px]"
+          />
         </div>
       </header>
 
