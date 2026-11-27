@@ -361,7 +361,7 @@ export function toAdminOverview(dto: AdminOverviewDto): AdminOverviewView {
       awaitingSync: dto.campus.cards.awaiting_sync,
       verificationsToday: dto.campus.verifications_today,
       rejectedToday: dto.campus.verifications_rejected_today,
-      acceptanceRate: dto.campus.verification_acceptance_rate,
+      acceptanceRate: dto.campus.verification_acceptance_rate * 100,
       sessionsOpen: dto.campus.sessions_open,
     },
     risk: toRiskView(dto.risk),

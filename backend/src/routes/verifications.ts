@@ -76,6 +76,7 @@ export async function verificationRoutes(app: FastifyInstance): Promise<void> {
       ])
 
       const summary = counts.rows[0]
+      const total = summary?.total ?? 0
       return {
         verifications: list.rows.map((row) => ({
           id: row.id,
@@ -90,11 +91,16 @@ export async function verificationRoutes(app: FastifyInstance): Promise<void> {
           verified_at: row.verified_at.toISOString(),
         })),
         summary: {
-          total: summary?.total ?? 0,
+          total,
           accepted: summary?.accepted ?? 0,
           rejected: summary?.rejected ?? 0,
         },
-        pagination: { page, limit, total: summary?.total ?? 0 },
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.max(1, Math.ceil(total / limit)),
+        },
       }
     },
   )

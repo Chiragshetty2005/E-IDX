@@ -308,7 +308,11 @@ describe('verification', () => {
     const adminToken = await login('admin')
     const allowed = await authGet(adminToken, '/api/v1/verifications?limit=10')
     assert.equal(allowed.statusCode, 200)
-    assert.ok(allowed.json().verifications.length > 0)
+    const page = allowed.json()
+    assert.ok(page.verifications.length > 0)
+    assert.equal(page.pagination.page, 1)
+    assert.equal(page.pagination.limit, 10)
+    assert.equal(page.pagination.pages, Math.ceil(page.pagination.total / 10))
   })
 })
 

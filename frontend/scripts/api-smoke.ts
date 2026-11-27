@@ -112,6 +112,11 @@ async function main() {
     overview.attention.every((row) => row.card.id.length > 0),
     `${overview.attention.length} cards`,
   )
+  check(
+    'overview acceptance rate is a percentage',
+    overview.campus.acceptanceRate > 50 && overview.campus.acceptanceRate <= 100,
+    `${overview.campus.acceptanceRate.toFixed(1)}%`,
+  )
 
   const listDto = await get<StudentListDto>(admin.cookie, '/students?page=1&limit=5')
   const rows = listDto.students.map(toStudentRow)
@@ -158,6 +163,11 @@ async function main() {
     'verification location',
     verifications.items.every((item) => item.location.length > 0),
     verifications.items[0]?.location ?? 'none',
+  )
+  check(
+    'verification pagination',
+    verifications.pages >= 1 && verifications.page === 1,
+    `page ${verifications.page} of ${verifications.pages}`,
   )
 
   const summaryDto = await get<VerificationSummaryDto>(admin.cookie, '/verifications/summary')
