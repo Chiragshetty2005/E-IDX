@@ -146,7 +146,10 @@ export function SignIn() {
                     key={option.value}
                     className={cn(
                       'flex cursor-pointer items-start gap-3 p-3 transition-colors duration-300',
-                      selected ? 'bg-ink-900' : 'bg-paper-0 hover:bg-paper-100',
+                      'focus-within:ring-2 focus-within:ring-inset',
+                      selected
+                        ? 'bg-ink-900 focus-within:ring-paper-50'
+                        : 'bg-paper-0 hover:bg-paper-100 focus-within:ring-ink-900',
                     )}
                   >
                     <input
