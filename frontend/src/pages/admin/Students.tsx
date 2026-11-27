@@ -224,7 +224,9 @@ export function AdminStudents() {
                       </div>
                     </th>
                     <td className="hidden px-4 py-3 body-6 text-ink-700 md:table-cell">
-                      CSE, {student.semester.replace('Semester ', 'Sem ')}, {student.section.replace('Section ', 'Sec ')}
+                      {student.level === 'school'
+                        ? `Primary school, ${student.classLabel ?? student.section}`
+                        : `CSE, ${student.semester.replace('Semester ', 'Sem ')}, ${student.section.replace('Section ', 'Sec ')}`}
                     </td>
                     <td className="hidden px-4 py-3 font-mono caption-4 text-ink-700 md:table-cell">
                       {student.card.id}
@@ -340,23 +342,44 @@ export function AdminStudents() {
                   <dt className="caption-2 text-ink-500">Mentor</dt>
                   <dd className="body-5">{record.mentor}</dd>
                 </div>
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt className="caption-2 text-ink-500">Attendance</dt>
-                  <dd className="font-mono body-5">{record.attendance.toFixed(1)}%</dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-4">
-                  <dt className="caption-2 text-ink-500">Academic status</dt>
-                  <dd>
-                    <RiskPill risk={record.risk} />
-                  </dd>
-                </div>
+                {record.level === 'college' ? (
+                  <>
+                    <div className="flex items-baseline justify-between gap-4">
+                      <dt className="caption-2 text-ink-500">Attendance</dt>
+                      <dd className="font-mono body-5">{record.attendance.toFixed(1)}%</dd>
+                    </div>
+                    <div className="flex items-baseline justify-between gap-4">
+                      <dt className="caption-2 text-ink-500">Academic status</dt>
+                      <dd>
+                        <RiskPill risk={record.risk} />
+                      </dd>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-baseline justify-between gap-4">
+                    <dt className="caption-2 text-ink-500">Register</dt>
+                    <dd className="body-5">
+                      Primary school, {record.classLabel ?? record.section}
+                    </dd>
+                  </div>
+                )}
               </dl>
             </div>
 
-            <div className="rounded-xl bg-paper-100 p-3">
-              <p className="caption-5 text-ink-500">Why the model flags this student</p>
-              <p className="mt-1 body-6 text-pretty">{record.driver}</p>
-            </div>
+            {record.level === 'college' ? (
+              <div className="rounded-xl bg-paper-100 p-3">
+                <p className="caption-5 text-ink-500">Why the model flags this student</p>
+                <p className="mt-1 body-6 text-pretty">{record.driver}</p>
+              </div>
+            ) : (
+              <div className="rounded-xl bg-paper-100 p-3">
+                <p className="caption-5 text-ink-500">Academic risk</p>
+                <p className="mt-1 body-6 text-pretty">
+                  The risk model scores university students only. A primary school record carries no
+                  risk score.
+                </p>
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-3">
               <Button

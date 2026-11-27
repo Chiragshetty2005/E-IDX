@@ -6,13 +6,25 @@
  * the view models in `src/types.ts`.
  */
 
-import type { CardStatus, RiskLevel, VerificationMethod, VerificationResult } from '../types'
+import type {
+  CardStatus,
+  CampusLevel,
+  CheckpointZone,
+  PresenceDirection,
+  PresenceMethod,
+  PresenceState,
+  RiskLevel,
+  VerificationMethod,
+  VerificationResult,
+} from '../types'
 
 export interface SessionUserDto {
   usn: string | null
   name: string
   email: string | null
-  role: 'admin' | 'faculty' | 'student'
+  role: 'admin' | 'faculty' | 'parent' | 'student'
+  level: CampusLevel
+  class_label: string | null
   programme: string | null
   semester: string | null
   section: string | null
@@ -34,6 +46,8 @@ export interface CardDto {
   last_sync_at: string | null
   revoked_at: string | null
   revoke_reason: string | null
+  nfc_uid: string | null
+  uhf_tag_id: string | null
 }
 
 export interface RiskDriverDto {
@@ -123,6 +137,8 @@ export interface StudentListDto {
   students: Array<{
     usn: string
     name: string
+    level: CampusLevel
+    class_label: string | null
     programme: string | null
     semester: string | null
     section: string | null
@@ -153,6 +169,8 @@ export interface StudentDetailDto {
     usn: string
     name: string
     email: string | null
+    level: CampusLevel
+    class_label: string | null
     programme: string | null
     semester: string | null
     section: string | null
@@ -378,4 +396,159 @@ export interface MeFeesDto {
     receipt_no: string
     status: string
   }>
+}
+
+export interface MePresenceDto {
+  presence: {
+    state: PresenceState
+    state_label: string
+    checkpoint: { code: string; name: string; zone: CheckpointZone } | null
+    method: PresenceMethod | null
+    occurred_at: string | null
+  } | null
+}
+
+export interface CheckpointDto {
+  code: string
+  name: string
+  zone: CheckpointZone
+  level: CampusLevel
+}
+
+export interface PresenceStudentDto {
+  usn: string
+  name: string
+  level: CampusLevel
+  class_label: string | null
+  section: string | null
+  state: PresenceState
+  state_label: string
+  checkpoint: { code: string; name: string; zone: CheckpointZone } | null
+  direction: PresenceDirection | null
+  method: PresenceMethod | null
+  occurred_at: string | null
+  guardian: string | null
+}
+
+export interface PresenceEventDto {
+  id: string
+  usn: string
+  name: string
+  checkpoint: { code: string; name: string; zone: CheckpointZone }
+  direction: PresenceDirection
+  method: PresenceMethod
+  source: string
+  occurred_at: string
+  notifications: number
+}
+
+export interface PresenceOverviewDto {
+  generated_at: string
+  scope: {
+    level: CampusLevel
+    label: string
+    section: string | null
+  }
+  summary: {
+    expected: number
+    on_campus: number
+    on_bus: number
+    left_campus: number
+    not_arrived: number
+    alerts_today: number
+    last_event_at: string | null
+  }
+  zones: Array<{ zone: CheckpointZone; count: number }>
+  students: PresenceStudentDto[]
+  events: PresenceEventDto[]
+  headcount: {
+    expected: number
+    present: number
+    by_class: Array<{ label: string; expected: number; present: number }>
+  }
+  checkpoints: CheckpointDto[]
+}
+
+export interface SimulatePresenceDto {
+  event: {
+    id: string
+    student_usn: string
+    student_name: string
+    checkpoint: { code: string; name: string; zone: CheckpointZone }
+    direction: PresenceDirection
+    method: PresenceMethod
+    source: string
+    occurred_at: string
+    simulated: boolean
+  }
+  notification: {
+    title: string
+    message: string
+    recipients: number
+  }
+}
+
+export interface ParentChildDto {
+  usn: string
+  name: string
+  level: CampusLevel
+  class_label: string | null
+  section: string | null
+  programme: string | null
+  relationship: string
+  presence: {
+    state: PresenceState
+    state_label: string
+    checkpoint: { code: string; name: string; zone: CheckpointZone } | null
+    direction: PresenceDirection | null
+    method: PresenceMethod | null
+    occurred_at: string | null
+  }
+  card: {
+    card_uid: string
+    status: CardStatus
+    battery: number | null
+    last_sync_at: string | null
+    valid_to: string | null
+    nfc_uid: string | null
+    uhf_tag_id: string | null
+  } | null
+}
+
+export interface ParentAlertDto {
+  id: string
+  student: { usn: string; name: string }
+  channel: 'push' | 'sms'
+  status: 'sent' | 'queued' | 'failed'
+  title: string
+  message: string
+  created_at: string
+  sent_at: string | null
+  checkpoint: { code: string; name: string; zone: CheckpointZone } | null
+}
+
+export interface ParentChildrenDto {
+  children: ParentChildDto[]
+}
+
+export interface ParentChildDetailDto {
+  child: ParentChildDto
+  events: Array<{
+    id: string
+    checkpoint: { code: string; name: string; zone: CheckpointZone }
+    direction: PresenceDirection
+    method: PresenceMethod
+    occurred_at: string
+  }>
+  alerts: ParentAlertDto[]
+}
+
+export interface ParentAlertsDto {
+  alerts: ParentAlertDto[]
+  summary: {
+    total: number
+    sent: number
+    queued: number
+    failed: number
+  }
 }

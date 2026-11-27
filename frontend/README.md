@@ -1,11 +1,13 @@
 # E-IDX frontend
 
 React front end for the E-IDX campus card platform. It covers card operations, academic
-support, student services and reader verification for three roles: admin, faculty and student.
+support, student services, reader verification and campus presence for four roles: admin,
+faculty, student and parent.
 
 The app talks to the E-IDX API in `../backend` and falls back to the sample register in
 `src/data/mock.ts` when the API cannot be reached, so the demo still works with the backend
-switched off.
+switched off. The presence and parent screens fall back to the preview register in
+`src/data/presence.ts` in the same way.
 
 ## Signing in
 
@@ -33,6 +35,43 @@ deployment. The API can turn it off with `PREVIEW_AUTH=false`.
 The `Viewing as` control in the sidebar is a demo switcher for the seeded accounts. In live
 mode it signs in again through `POST /auth/preview-login`, so the server session and the
 screen always agree. The route guard in `App.tsx` is a preview convenience only.
+
+The parent role signs in from the third row of the sign-in page (`Parent or guardian`). A
+parent account is linked to children in `parent_links`; the portal only ever shows those
+children. The API enforces the link on the server, so previewing the parent role cannot be
+widened from the browser.
+
+## Campus presence
+
+Presence is checkpoint based, not GPS. A child is seen when a reader sees a tag or a QR or
+NFC credential at a checkpoint.
+
+| Term | Meaning |
+| --- | --- |
+| Checkpoint | A named reader position: bus stop, gate, classroom, library or canteen. |
+| State | `on-campus`, `on-bus`, `left` or `not-arrived`. |
+| Method | `uhf` (hands-free tag), `qr` (scan) or `nfc` (tap). |
+| Source | `reader`, `simulated` or `seed`. |
+
+Two staff screens and one parent portal read it:
+
+* `/admin/presence` — the campus presence board. Admin scopes it to the school pilot or the
+  college register, faculty are locked to their own section. The board shows the summary
+  band, the live student list, zone counts, the emergency headcount, the checkpoint feed and
+  the read simulator.
+* `/parent` and `/parent/children/:usn` — the children list and a single child's timeline,
+  card and tag identifiers.
+* `/parent/alerts` — arrival, departure, bus and off-campus notifications for linked
+  children only.
+
+The read simulator writes a real `presence_events` row with `source='simulated'`, then raises
+a push notification (sent) and an SMS (queued) outbox row for every linked parent. It is
+labelled as a simulation on the screen and in the event feed: a browser cannot read a passive
+UHF tag, so real reads must arrive from a reader.
+
+School children are never scored by the academic risk model. The students register shows
+`Primary school` and the class label for them instead of a risk tier, and no risk field is
+sent to a parent payload or a card update.
 
 ## Live and preview modes
 
@@ -94,6 +133,8 @@ the real adapters over the payloads. It catches shape drift between the backend 
 | Faculty student record | `GET /students/:usn`, `POST /faculty/students/:usn/interventions` |
 | Attendance sessions | `GET /sessions`, `POST /sessions/:id/open`, `POST /sessions/:id/close` |
 | Student card and services | `GET /me/*`, `POST /me/pass` |
+| Campus presence board | `GET /presence/overview?level=school\|college`, `POST /presence/simulate` |
+| Parent portal | `GET /parent/children`, `GET /parent/children/:usn`, `GET /parent/alerts` |
 | Verification console | Scripted test cases only, no API call |
 
 Search, filtering and pagination run on the server for the students register and the
@@ -133,12 +174,14 @@ src/
   data/
     mock.ts         Sample students, checks, sessions, services and model metadata
     preview.ts      Sample data rendered into the same view models the API produces
+    presence.ts     School pilot, parent preview and presence view models
     views.ts        View models shared by the pages
     hooks.ts        Data hooks with live loading, error and fallback handling
   lib/ui.ts         Small class and label helpers
-  pages/admin/      Admin overview, students, verification log, insights
+  pages/admin/      Admin overview, students, verification log, insights, campus presence
   pages/faculty/    Cohort, student detail, sessions
   pages/student/    My card, campus services
+  pages/parent/     Children, child detail, alerts
   pages/SignIn.tsx  Sign-in page, outside the shell
   pages/Verify.tsx  Reader verification simulator
   App.tsx           Route map, session gate and role guard
@@ -167,6 +210,12 @@ These are product invariants, not optional polish:
 6. **Reader traffic is device traffic.** Readers need device credentials, server-side replay
    protection and rate limits. The browser never posts attendance; the tap simulator on the
    sessions screen stays in the browser and is labelled as a test.
+7. **Parents see presence, never risk.** Parent payloads contain only the linked child's
+   presence, card and notification records. The parent view models in `src/types.ts` have no
+   risk fields, and the API rejects risk keys in parent responses.
+8. **Presence is checkpoint based.** There is no GPS and no location tracking between
+   checkpoints. A read says a tag was seen at a named checkpoint at a time; it does not say
+   where the child has been since.
 
 ## Preview limitations
 
@@ -176,6 +225,12 @@ These are product invariants, not optional polish:
   and it does not post to the API.
 - The tap simulator on the attendance screen is local to the browser. Real readers post taps to
   `POST /sessions/:id/taps` with device credentials.
+- The presence simulator posts to `POST /presence/simulate` as an admin and writes a real
+  event with `source='simulated'`. It stands in for a hands-free reader, because a browser
+  cannot read a passive UHF tag. The notification rows it creates are outbox rows, not a
+  delivered push message or SMS.
+- There is no live GPS. Presence only changes when a checkpoint reader or the simulator
+  writes an event.
 - The faculty attendance trend chart is illustrative. Weekly attendance history is not stored yet.
 - In preview mode, mentor notes, queued card updates and session state live in component memory
   and reset on reload.

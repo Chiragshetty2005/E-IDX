@@ -1,5 +1,10 @@
-import type { CardStatus, RiskLevel, VerificationResult } from '../types'
-import { cardStatusLabel, cn, riskLabel } from '../lib/ui'
+import type {
+  CardStatus,
+  PresenceState,
+  RiskLevel,
+  VerificationResult,
+} from '../types'
+import { cardStatusLabel, cn, presenceStateLabel, riskLabel } from '../lib/ui'
 
 type Tone = 'neutral' | 'verified' | 'attention' | 'critical'
 
@@ -60,4 +65,33 @@ export function ResultPill({ result }: { result: VerificationResult }) {
 
 export function MethodPill({ method }: { method: 'qr' | 'nfc' }) {
   return <Pill label={method === 'qr' ? 'QR scan' : 'NFC tap'} tone="neutral" />
+}
+
+export function PresencePill({ state }: { state: PresenceState }) {
+  const tone: Tone =
+    state === 'on-campus'
+      ? 'verified'
+      : state === 'on-bus'
+        ? 'attention'
+        : state === 'not-arrived'
+          ? 'attention'
+          : 'neutral'
+  return <Pill label={presenceStateLabel[state]} tone={tone} />
+}
+
+export function NotificationPill({
+  status,
+  className,
+}: {
+  status: 'sent' | 'queued' | 'failed'
+  className?: string
+}) {
+  const tone: Tone = status === 'sent' ? 'verified' : status === 'queued' ? 'attention' : 'critical'
+  return (
+    <Pill
+      label={status === 'sent' ? 'Sent' : status === 'queued' ? 'Queued' : 'Failed'}
+      tone={tone}
+      className={className}
+    />
+  )
 }

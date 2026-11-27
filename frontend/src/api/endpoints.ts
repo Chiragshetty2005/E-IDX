@@ -13,8 +13,14 @@ import type {
   MeExamsDto,
   MeFeesDto,
   MeLibraryDto,
+  MePresenceDto,
+  ParentAlertsDto,
+  ParentChildDetailDto,
+  ParentChildrenDto,
+  PresenceOverviewDto,
   SessionDto,
   SessionListDto,
+  SimulatePresenceDto,
   StudentDetailDto,
   StudentListDto,
   VerificationListDto,
@@ -149,7 +155,36 @@ export const endpoints = {
     return api<MeFeesDto>('/me/fees')
   },
 
+  mePresence(): Promise<MePresenceDto> {
+    return api<MePresenceDto>('/me/presence')
+  },
+
   createPass(): Promise<CampusPassDto> {
     return api<CampusPassDto>('/me/pass', { method: 'POST' })
+  },
+
+  presenceOverview(level: 'school' | 'college' = 'school'): Promise<PresenceOverviewDto> {
+    return api<PresenceOverviewDto>(`/presence/overview${queryString({ level })}`)
+  },
+
+  simulatePresence(body: {
+    student_usn: string
+    checkpoint_code: string
+    direction: 'in' | 'out'
+    method: 'uhf' | 'qr' | 'nfc'
+  }): Promise<SimulatePresenceDto> {
+    return api<SimulatePresenceDto>('/presence/simulate', { method: 'POST', body })
+  },
+
+  parentChildren(): Promise<ParentChildrenDto> {
+    return api<ParentChildrenDto>('/parent/children')
+  },
+
+  parentChild(usn: string): Promise<ParentChildDetailDto> {
+    return api<ParentChildDetailDto>(`/parent/children/${usnPath(usn)}`)
+  },
+
+  parentAlerts(): Promise<ParentAlertsDto> {
+    return api<ParentAlertsDto>('/parent/alerts')
   },
 }

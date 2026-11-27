@@ -8,6 +8,10 @@ import {
   toCohortView,
   toInsightsView,
   toMeView,
+  toParentAlerts,
+  toParentChildDetail,
+  toParentChildren,
+  toPresenceOverview,
   toSession,
   toShapFeatures,
   toStudentRecord,
@@ -28,11 +32,21 @@ import {
   previewVerifications,
   previewVerificationSummary,
 } from './preview'
+import {
+  previewParentAlerts,
+  previewParentChild,
+  previewParentChildren,
+  previewPresenceOverview,
+} from './presence'
 import type {
   AdminOverviewView,
   CohortView,
   InsightsView,
   MeView,
+  ParentAlertsView,
+  ParentChildDetailView,
+  ParentChildrenView,
+  PresenceOverviewView,
   StudentRow,
   StudentSupportView,
   VerificationSummaryView,
@@ -302,7 +316,7 @@ export function useMe(): AsyncState<MeView> {
   return useApiData<MeView>(
     isLive,
     async () => {
-      const [me, card, attendance, academics, library, exams, fees] = await Promise.all([
+      const [me, card, attendance, academics, library, exams, fees, presence] = await Promise.all([
         endpoints.me(),
         endpoints.meCard(),
         endpoints.meAttendance(),
@@ -310,6 +324,7 @@ export function useMe(): AsyncState<MeView> {
         endpoints.meLibrary(),
         endpoints.meExams(),
         endpoints.meFees(),
+        endpoints.mePresence(),
       ])
       return toMeView({
         user: me.user,
@@ -319,6 +334,7 @@ export function useMe(): AsyncState<MeView> {
         library,
         exams,
         fees,
+        presence: presence.presence,
       })
     },
     previewMe(),
@@ -336,5 +352,58 @@ export function useCardStudioStudents(limit = 100): AsyncState<StudentRow[]> {
     },
     previewStudentRows(),
     [limit],
+  )
+}
+
+export function usePresenceOverview(
+  level: 'school' | 'college',
+): AsyncState<PresenceOverviewView> {
+  const { isLive } = useSession()
+  const fallback = useMemo(() => toPresenceOverview(previewPresenceOverview(level)), [level])
+
+  return useApiData<PresenceOverviewView>(
+    isLive,
+    async () => toPresenceOverview(await endpoints.presenceOverview(level)),
+    fallback,
+    [level],
+  )
+}
+
+export function useParentChildren(): AsyncState<ParentChildrenView> {
+  const { isLive } = useSession()
+  const fallback = useMemo(() => toParentChildren(previewParentChildren()), [])
+
+  return useApiData<ParentChildrenView>(
+    isLive,
+    async () => toParentChildren(await endpoints.parentChildren()),
+    fallback,
+    [],
+  )
+}
+
+export function useParentChild(usn: string | null): AsyncState<ParentChildDetailView | null> {
+  const { isLive } = useSession()
+  const fallback = useMemo<ParentChildDetailView | null>(() => {
+    const detail = usn ? previewParentChild(usn) : null
+    return detail ? toParentChildDetail(detail) : null
+  }, [usn])
+
+  return useApiData<ParentChildDetailView | null>(
+    isLive && Boolean(usn),
+    async () => toParentChildDetail(await endpoints.parentChild(usn as string)),
+    fallback,
+    [usn],
+  )
+}
+
+export function useParentAlerts(): AsyncState<ParentAlertsView> {
+  const { isLive } = useSession()
+  const fallback = useMemo(() => toParentAlerts(previewParentAlerts()), [])
+
+  return useApiData<ParentAlertsView>(
+    isLive,
+    async () => toParentAlerts(await endpoints.parentAlerts()),
+    fallback,
+    [],
   )
 }

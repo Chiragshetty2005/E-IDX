@@ -1,4 +1,4 @@
-import type { CardStatus, RiskLevel } from '../types'
+import type { CardStatus, CheckpointZone, PresenceState, RiskLevel } from '../types'
 
 export function cn(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(' ')
@@ -16,6 +16,27 @@ export const riskLabel: Record<RiskLevel, string> = {
   support: 'Needs support',
   watch: 'Watch',
   'on-track': 'On track',
+}
+
+export const zoneLabel: Record<CheckpointZone, string> = {
+  bus: 'Bus',
+  gate: 'Gate',
+  classroom: 'Classroom',
+  library: 'Library',
+  canteen: 'Canteen',
+}
+
+export const presenceStateLabel: Record<PresenceState, string> = {
+  'on-campus': 'On campus',
+  'on-bus': 'On the bus',
+  left: 'Left campus',
+  'not-arrived': 'Not arrived',
+}
+
+export const methodLabel: Record<string, string> = {
+  uhf: 'UHF read',
+  qr: 'QR scan',
+  nfc: 'NFC tap',
 }
 
 export function formatPercent(value: number, digits = 1) {

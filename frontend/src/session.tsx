@@ -23,6 +23,7 @@ import type { SessionDto, SessionUserDto } from './api/types'
 export const roleHome: Record<Role, string> = {
   admin: '/admin',
   faculty: '/faculty',
+  parent: '/parent',
   student: '/student',
 }
 
@@ -61,7 +62,7 @@ const ROLE_KEY = 'eidx-role'
 
 export function readStoredRole(): Role {
   const stored = window.localStorage.getItem(ROLE_KEY)
-  return stored === 'faculty' || stored === 'student' ? stored : 'admin'
+  return stored === 'faculty' || stored === 'parent' || stored === 'student' ? stored : 'admin'
 }
 
 /**
@@ -97,6 +98,7 @@ function detailFor(user: SessionUserDto): string {
       ? `Associate professor, CSE, ${user.section}`
       : 'Associate professor, CSE'
   }
+  if (user.role === 'parent') return 'Parent or guardian'
   return `${user.usn ?? ''}, ${user.semester ?? 'Student'}`
 }
 

@@ -1,4 +1,7 @@
-export type Role = 'admin' | 'faculty' | 'student'
+export type Role = 'admin' | 'faculty' | 'parent' | 'student'
+
+/** `school` is the pre-KG to Grade 4 pilot; `college` is the university register. */
+export type CampusLevel = 'school' | 'college'
 
 export type CardStatus = 'active' | 'sync' | 'low-battery' | 'revoked' | 'unprovisioned'
 
@@ -8,6 +11,15 @@ export type VerificationResult = 'accepted' | 'rejected'
 
 export type VerificationMethod = 'qr' | 'nfc'
 
+/** Where a student is right now, from the latest checkpoint read. */
+export type PresenceState = 'on-campus' | 'on-bus' | 'left' | 'not-arrived'
+
+export type CheckpointZone = 'bus' | 'gate' | 'classroom' | 'library' | 'canteen'
+
+export type PresenceMethod = 'uhf' | 'qr' | 'nfc'
+
+export type PresenceDirection = 'in' | 'out'
+
 export interface Card {
   id: string
   status: CardStatus
@@ -15,6 +27,8 @@ export interface Card {
   lastSync: string
   validTo: string
   firmware: string
+  nfcUid: string
+  uhfTagId: string
 }
 
 export interface CourseAttendance {
@@ -34,6 +48,8 @@ export interface Student {
   usn: string
   name: string
   initials: string
+  level: CampusLevel
+  classLabel: string | null
   programme: string
   semester: string
   section: string

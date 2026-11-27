@@ -79,6 +79,8 @@ export function previewStudentRow(student: Student): StudentRow {
     usn: student.usn,
     name: student.name,
     initials: student.initials,
+    level: student.level,
+    classLabel: student.classLabel,
     programme: student.programme,
     semester: student.semester,
     section: student.section,
@@ -238,6 +240,17 @@ export function previewMe(): MeView {
 
   return {
     student,
+    presence: {
+      state: 'on-campus',
+      stateLabel: 'On campus',
+      checkpoint: {
+        code: 'CAMPUS-GATE',
+        name: 'Campus main gate',
+        zone: 'gate',
+        level: 'college',
+      },
+      time: '08:42',
+    },
     exams: exams.map((exam) => ({ ...exam })),
     loans: loans.map((loan) => ({ ...loan })),
     receipts: feeReceipts.map((receipt) => ({ ...receipt })),

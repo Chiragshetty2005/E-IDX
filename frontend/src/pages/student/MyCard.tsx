@@ -85,6 +85,28 @@ export function StudentMyCard() {
             <p className="font-mono caption-5 text-ink-500">Valid to {student.card.validTo}</p>
           </div>
 
+          <dl className="mt-6 grid gap-4 border-y border-paper-200 py-4 sm:grid-cols-3 sm:divide-x sm:divide-paper-200">
+            <div className="sm:pr-6">
+              <dt className="caption-5 text-ink-500">Last checkpoint</dt>
+              <dd className="mt-1 body-5">
+                {data.presence?.checkpoint?.name ?? 'No read today'}
+              </dd>
+              <p className="mt-1 caption-5 text-ink-500">
+                {data.presence ? `${data.presence.stateLabel} at ${data.presence.time}` : '—'}
+              </p>
+            </div>
+            <div className="sm:px-6">
+              <dt className="caption-5 text-ink-500">NFC UID</dt>
+              <dd className="mt-1 font-mono caption-4 text-ink-700">{student.card.nfcUid}</dd>
+              <p className="mt-1 caption-5 text-ink-500">Read by the campus readers</p>
+            </div>
+            <div className="sm:pl-6">
+              <dt className="caption-5 text-ink-500">UHF tag</dt>
+              <dd className="mt-1 font-mono caption-4 text-ink-700">{student.card.uhfTagId}</dd>
+              <p className="mt-1 caption-5 text-ink-500">Hands-free read at a checkpoint</p>
+            </div>
+          </dl>
+
           <p className="mt-6 max-w-[560px] caption-5 text-ink-500 text-pretty">
             A tap on a campus reader opens the services view. Your card holds only what is needed
             for identity and campus access.

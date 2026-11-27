@@ -16,6 +16,9 @@ import {
   toCohortView,
   toInsightsView,
   toMeView,
+  toParentAlerts,
+  toParentChildren,
+  toPresenceOverview,
   toSession,
   toShapFeatures,
   toStudentRecord,
@@ -35,6 +38,10 @@ import type {
   MeExamsDto,
   MeFeesDto,
   MeLibraryDto,
+  MePresenceDto,
+  ParentAlertsDto,
+  ParentChildrenDto,
+  PresenceOverviewDto,
   SessionDto,
   SessionListDto,
   StudentDetailDto,
@@ -99,7 +106,7 @@ async function main() {
   const overview = toAdminOverview(overviewDto)
   check(
     'overview campus totals',
-    overview.campus.students === overview.risk.total,
+    overview.campus.students >= overview.risk.total,
     `${overview.campus.students} students, ${overview.risk.support} in support`,
   )
   check(
@@ -193,6 +200,7 @@ async function main() {
   const library = await get<MeLibraryDto>(student.cookie, '/me/library')
   const exams = await get<MeExamsDto>(student.cookie, '/me/exams')
   const fees = await get<MeFeesDto>(student.cookie, '/me/fees')
+  const presenceDto = await get<MePresenceDto>(student.cookie, '/me/presence')
   const studentView = toMeView({
     user: me.user,
     card: card.card,
@@ -201,6 +209,7 @@ async function main() {
     library,
     exams,
     fees,
+    presence: presenceDto.presence,
   })
   check('student card', studentView.student.card.id.startsWith('EIDX-'), studentView.student.card.id)
   check('student attendance', studentView.student.attendance > 0, `${studentView.student.attendance}%`)
@@ -209,9 +218,51 @@ async function main() {
   check('student loans', studentView.loans.length > 0, `${studentView.loans.length} loans`)
   check('student receipts', studentView.receipts.length > 0, `${studentView.receipts.length} receipts`)
   check(
+    'student presence',
+    studentView.presence !== null,
+    studentView.presence ? `${studentView.presence.stateLabel} at ${studentView.presence.time}` : 'none',
+  )
+  check(
     'student view carries no risk fields',
     !('risk' in studentView.student) && !('probability' in studentView.student),
   )
+
+  const schoolPresenceDto = await get<PresenceOverviewDto>(admin.cookie, '/presence/overview?level=school')
+  const presence = toPresenceOverview(schoolPresenceDto)
+  check(
+    'school presence scope',
+    presence.scope.level === 'school' && presence.summary.expected === 24,
+    `${presence.summary.onCampus} on campus of ${presence.summary.expected}`,
+  )
+  check(
+    'school presence rows',
+    presence.students.length === 24 && presence.events.length > 0,
+    `${presence.events.length} reads today`,
+  )
+  check(
+    'school presence zones',
+    presence.zones.length > 0 && presence.zones.every((zone) => zone.count > 0),
+    presence.zones.map((zone) => `${zone.label} ${zone.count}`).join(', '),
+  )
+
+  const parent = await login('parent')
+  const childrenDto = await get<ParentChildrenDto>(parent.cookie, '/parent/children')
+  const children = toParentChildren(childrenDto)
+  check('parent children', children.children.length === 2, `${children.children.length} linked`)
+  check(
+    'parent child presence',
+    children.children.every((child) => child.state !== 'not-arrived'),
+    children.children.map((child) => `${child.name} ${child.stateLabel}`).join(', '),
+  )
+  const alertsDto = await get<ParentAlertsDto>(parent.cookie, '/parent/alerts')
+  const alerts = toParentAlerts(alertsDto)
+  check('parent alerts', alerts.alerts.length > 0, `${alerts.alerts.length} messages`)
+  check(
+    'parent alerts carry no risk fields',
+    !JSON.stringify(alerts).match(/risk|probability|shap/i),
+  )
+  const parentDenied = await fetch(`${BASE}/admin/overview`, { headers: { cookie: parent.cookie } })
+  check('parent stays out of staff routes', parentDenied.status === 403, parentDenied.status.toString())
 
   const pass = await post<CampusPassDto>(student.cookie, '/me/pass')
   check('campus pass', pass.pass.token.length > 20, `expires ${pass.pass.expires_at}`)

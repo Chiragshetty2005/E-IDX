@@ -4,13 +4,14 @@ import { Pill, RiskPill } from '../../components/Status'
 import { TrendChart } from '../../components/Charts'
 import { buttonStyles } from '../../components/Button'
 import { DataNotice } from '../../components/DataNotice'
-import { useCohort } from '../../data/hooks'
+import { useCohort, usePresenceOverview } from '../../data/hooks'
 import { useSession } from '../../session'
 import { attendanceTrend } from '../../data/mock'
 
 export function FacultyCohort() {
   const { user, serverUser } = useSession()
   const { data, loading, error } = useCohort()
+  const { data: presence } = usePresenceOverview('college')
   const { students, support, watch, interventions30d, watchlist, sessions } = data
   const flagged = support + watch
   const section = serverUser?.section ?? 'Section A'
@@ -167,6 +168,47 @@ export function FacultyCohort() {
             {sessions.length === 0 ? (
               <p className="mt-3 caption-2 text-ink-500">No sessions are scheduled for today.</p>
             ) : null}
+          </section>
+
+          <section>
+            <SectionHead
+              title="In class now"
+              description="Students in your section with a checkpoint read on campus today."
+            />
+            <div className="mt-4 flex items-baseline gap-3">
+              <p className="font-mono heading-4 tabular-nums">{presence.summary.onCampus}</p>
+              <p className="caption-2 text-ink-500">
+                on campus of {presence.summary.expected} expected
+              </p>
+            </div>
+            <ul className="mt-3">
+              {presence.students
+                .filter((student) => student.state === 'on-campus')
+                .slice(0, 5)
+                .map((student) => (
+                  <li
+                    key={student.usn}
+                    className="flex items-center justify-between gap-3 border-b border-paper-200 py-2 last:border-b-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate body-6">{student.name}</p>
+                      <p className="mt-0.5 truncate caption-5 text-ink-500">
+                        {student.checkpoint ? student.checkpoint.name : 'On campus'}
+                      </p>
+                    </div>
+                    <span className="shrink-0 font-mono caption-5 text-ink-500">{student.time}</span>
+                  </li>
+                ))}
+              {presence.summary.onCampus === 0 ? (
+                <li className="py-2 caption-2 text-ink-500">
+                  No checkpoint read has been logged for this section today.
+                </li>
+              ) : null}
+            </ul>
+            <p className="mt-3 caption-5 text-ink-500 text-pretty">
+              Presence comes from the card readers at the gate and in the classrooms. It is a
+              roll-call aid, not a grade or an attendance mark.
+            </p>
           </section>
         </div>
       </div>

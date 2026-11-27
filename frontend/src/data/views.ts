@@ -1,6 +1,11 @@
 import type {
   Card,
+  CampusLevel,
+  CheckpointZone,
   Intervention,
+  PresenceDirection,
+  PresenceMethod,
+  PresenceState,
   RiskLevel,
   Session,
   ShapFeature,
@@ -14,6 +19,8 @@ export interface StudentRow {
   usn: string
   name: string
   initials: string
+  level: CampusLevel
+  classLabel: string | null
   programme: string
   semester: string
   section: string
@@ -145,6 +152,12 @@ export interface StudentSupportView {
 
 export interface MeView {
   student: StudentProfile
+  presence: {
+    state: PresenceState
+    stateLabel: string
+    checkpoint: CheckpointView | null
+    time: string
+  } | null
   exams: Array<{ code: string; title: string; date: string; time: string; hall: string }>
   loans: Array<{ title: string; due: string; status: string }>
   receipts: Array<{
@@ -154,4 +167,117 @@ export interface MeView {
     receipt: string
     status: string
   }>
+}
+
+export interface CheckpointView {
+  code: string
+  name: string
+  zone: CheckpointZone
+  level: CampusLevel
+}
+
+export interface PresenceStudentView {
+  usn: string
+  name: string
+  initials: string
+  level: CampusLevel
+  classLabel: string | null
+  section: string | null
+  state: PresenceState
+  stateLabel: string
+  checkpoint: CheckpointView | null
+  direction: PresenceDirection | null
+  method: PresenceMethod | null
+  time: string
+  guardian: string | null
+}
+
+export interface PresenceEventView {
+  id: string
+  usn: string
+  name: string
+  initials: string
+  checkpoint: CheckpointView
+  direction: PresenceDirection
+  method: PresenceMethod
+  source: string
+  time: string
+  notifications: number
+}
+
+export interface PresenceOverviewView {
+  generatedAt: string
+  scope: { level: CampusLevel; label: string; section: string | null }
+  summary: {
+    expected: number
+    onCampus: number
+    onBus: number
+    leftCampus: number
+    notArrived: number
+    alertsToday: number
+    lastEventAt: string | null
+  }
+  zones: Array<{ zone: CheckpointZone; label: string; count: number }>
+  students: PresenceStudentView[]
+  events: PresenceEventView[]
+  headcount: {
+    expected: number
+    present: number
+    byClass: Array<{ label: string; expected: number; present: number }>
+  }
+  checkpoints: CheckpointView[]
+}
+
+export interface ParentChildView {
+  usn: string
+  name: string
+  initials: string
+  classLabel: string | null
+  section: string | null
+  relationship: string
+  state: PresenceState
+  stateLabel: string
+  checkpoint: CheckpointView | null
+  time: string
+  card: {
+    id: string
+    status: Card['status']
+    battery: number
+    lastSync: string
+    validTo: string
+    nfcUid: string
+    uhfTagId: string
+  } | null
+}
+
+export interface ParentAlertView {
+  id: string
+  student: { usn: string; name: string; initials: string }
+  channel: 'push' | 'sms'
+  status: 'sent' | 'queued' | 'failed'
+  title: string
+  message: string
+  time: string
+  checkpoint: CheckpointView | null
+}
+
+export interface ParentChildrenView {
+  children: ParentChildView[]
+}
+
+export interface ParentChildDetailView {
+  child: ParentChildView
+  events: Array<{
+    id: string
+    checkpoint: CheckpointView
+    direction: PresenceDirection
+    method: PresenceMethod
+    time: string
+  }>
+  alerts: ParentAlertView[]
+}
+
+export interface ParentAlertsView {
+  alerts: ParentAlertView[]
+  summary: { total: number; sent: number; queued: number; failed: number }
 }

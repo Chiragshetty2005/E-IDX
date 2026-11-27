@@ -4,12 +4,16 @@ import { SessionProvider, roleHome, useSession } from './session'
 import type { Role } from './types'
 import { AppShell } from './components/AppShell'
 import { AdminOverview } from './pages/admin/Overview'
+import { AdminPresence } from './pages/admin/Presence'
 import { AdminStudents } from './pages/admin/Students'
 import { AdminVerifications } from './pages/admin/Verifications'
 import { AdminInsights } from './pages/admin/Insights'
 import { FacultyCohort } from './pages/faculty/Cohort'
 import { FacultyStudent } from './pages/faculty/StudentDetail'
 import { FacultySessions } from './pages/faculty/Sessions'
+import { ParentAlerts } from './pages/parent/Alerts'
+import { ParentChildDetail } from './pages/parent/ChildDetail'
+import { ParentChildren } from './pages/parent/Children'
 import { StudentMyCard } from './pages/student/MyCard'
 import { StudentServices } from './pages/student/Services'
 import { VerifyConsole } from './pages/Verify'
@@ -76,6 +80,14 @@ export default function App() {
                 }
               />
               <Route
+                path="admin/presence"
+                element={
+                  <RoleGate roles={['admin']}>
+                    <AdminPresence />
+                  </RoleGate>
+                }
+              />
+              <Route
                 path="admin/students"
                 element={
                   <RoleGate roles={['admin']}>
@@ -128,6 +140,30 @@ export default function App() {
                 element={
                   <RoleGate roles={['admin', 'faculty']}>
                     <VerifyConsole />
+                  </RoleGate>
+                }
+              />
+              <Route
+                path="parent"
+                element={
+                  <RoleGate roles={['parent']}>
+                    <ParentChildren />
+                  </RoleGate>
+                }
+              />
+              <Route
+                path="parent/children/:usn"
+                element={
+                  <RoleGate roles={['parent']}>
+                    <ParentChildDetail />
+                  </RoleGate>
+                }
+              />
+              <Route
+                path="parent/alerts"
+                element={
+                  <RoleGate roles={['parent']}>
+                    <ParentAlerts />
                   </RoleGate>
                 }
               />

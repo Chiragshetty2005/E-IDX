@@ -32,6 +32,8 @@ const emptyHolder: CardHolder = {
     lastSync: 'No card issued',
     validTo: '—',
     firmware: '—',
+    nfcUid: '—',
+    uhfTagId: '—',
   },
 }
 

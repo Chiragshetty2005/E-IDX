@@ -19,6 +19,15 @@ import type {
   MeExamsDto,
   MeFeesDto,
   MeLibraryDto,
+  MePresenceDto,
+  ParentAlertDto,
+  ParentAlertsDto,
+  ParentChildDetailDto,
+  ParentChildDto,
+  ParentChildrenDto,
+  PresenceEventDto,
+  PresenceOverviewDto,
+  PresenceStudentDto,
   RiskDriverDto,
   RiskPredictionDto,
   SessionDtoApi,
@@ -30,10 +39,19 @@ import type {
 } from '../api/types'
 import type {
   AdminOverviewView,
+  CheckpointView,
   CohortView,
   InsightsView,
   MeView,
   ModelInfoView,
+  ParentAlertView,
+  ParentAlertsView,
+  ParentChildDetailView,
+  ParentChildView,
+  ParentChildrenView,
+  PresenceEventView,
+  PresenceOverviewView,
+  PresenceStudentView,
   RecentUpdate,
   RiskView,
   StudentRow,
@@ -42,6 +60,9 @@ import type {
   VerificationView,
   WatchItem,
 } from '../data/views'
+// The extension is explicit because `scripts/api-smoke.ts` runs this module
+// under Node's own TypeScript loader, which needs a resolvable path.
+import { zoneLabel } from '../lib/ui.ts'
 
 const CAMPUS_TZ = 'Asia/Kolkata'
 
@@ -143,6 +164,8 @@ function unprovisionedCard(): Card {
     lastSync: 'No card issued',
     validTo: '—',
     firmware: '—',
+    nfcUid: '—',
+    uhfTagId: '—',
   }
 }
 
@@ -155,6 +178,8 @@ export function toCard(card: CardDto | null): Card {
     lastSync: formatRelative(card.last_sync_at),
     validTo: formatMonthYear(card.valid_to),
     firmware: card.firmware,
+    nfcUid: card.nfc_uid ?? '—',
+    uhfTagId: card.uhf_tag_id ?? '—',
   }
 }
 
@@ -169,6 +194,8 @@ function toListCard(
     lastSync: formatRelative(card.last_sync_at),
     validTo: formatMonthYear(card.valid_to),
     firmware: '—',
+    nfcUid: '—',
+    uhfTagId: '—',
   }
 }
 
@@ -237,6 +264,8 @@ export function toStudentRecord(detail: StudentDetailDto): Student {
     usn: source.usn,
     name: source.name,
     initials: initials(source.name),
+    level: source.level,
+    classLabel: source.class_label,
     programme: source.programme ?? '—',
     semester: source.semester ?? '—',
     section: source.section ?? '—',
@@ -267,6 +296,8 @@ export function toStudentRow(
     usn: row.usn,
     name: row.name,
     initials: initials(row.name),
+    level: row.level,
+    classLabel: row.class_label,
     programme: row.programme ?? '—',
     semester: row.semester ?? '—',
     section: row.section ?? '—',
@@ -285,6 +316,8 @@ export function toAttentionRow(
     usn: row.usn,
     name: row.name,
     initials: initials(row.name),
+    level: 'college',
+    classLabel: null,
     programme: '—',
     semester: '—',
     section: '—',
@@ -296,6 +329,8 @@ export function toAttentionRow(
       lastSync: formatRelative(row.last_sync_at),
       validTo: formatMonthYear(row.valid_to),
       firmware: '—',
+      nfcUid: '—',
+      uhfTagId: '—',
     },
     risk: 'on-track',
     probability: 0,
@@ -534,6 +569,7 @@ export function toMeView(input: {
   library: MeLibraryDto
   exams: MeExamsDto
   fees: MeFeesDto
+  presence: MePresenceDto['presence']
 }): MeView {
   const student: StudentProfile = {
     usn: input.user.usn ?? '—',
@@ -562,6 +598,18 @@ export function toMeView(input: {
 
   return {
     student,
+    presence: input.presence
+      ? {
+          state: input.presence.state,
+          stateLabel: input.presence.state_label,
+          checkpoint: input.presence.checkpoint
+            ? toCheckpointView(input.presence.checkpoint, 'college')
+            : null,
+          time: input.presence.occurred_at
+            ? formatShortTime(input.presence.occurred_at)
+            : '—',
+        }
+      : null,
     exams: input.exams.exams.map((exam) => ({
       code: exam.course_code,
       title: exam.title,
@@ -593,5 +641,144 @@ export function noteToIntervention(note: {
     date: formatDate(note.created_at),
     note: note.note,
     by: note.by,
+  }
+}
+
+function toCheckpointView(
+  checkpoint: { code: string; name: string; zone: CheckpointView['zone'] },
+  level: CheckpointView['level'],
+): CheckpointView {
+  return { ...checkpoint, level }
+}
+
+export function toPresenceStudent(row: PresenceStudentDto): PresenceStudentView {
+  return {
+    usn: row.usn,
+    name: row.name,
+    initials: initials(row.name),
+    level: row.level,
+    classLabel: row.class_label,
+    section: row.section,
+    state: row.state,
+    stateLabel: row.state_label,
+    checkpoint: row.checkpoint ? toCheckpointView(row.checkpoint, row.level) : null,
+    direction: row.direction,
+    method: row.method,
+    time: row.occurred_at ? formatShortTime(row.occurred_at) : '—',
+    guardian: row.guardian,
+  }
+}
+
+export function toPresenceEvent(row: PresenceEventDto): PresenceEventView {
+  return {
+    id: row.id,
+    usn: row.usn,
+    name: row.name,
+    initials: initials(row.name),
+    checkpoint: toCheckpointView(row.checkpoint, 'school'),
+    direction: row.direction,
+    method: row.method,
+    source: row.source,
+    time: formatShortTime(row.occurred_at),
+    notifications: row.notifications,
+  }
+}
+
+export function toPresenceOverview(dto: PresenceOverviewDto): PresenceOverviewView {
+  return {
+    generatedAt: dto.generated_at,
+    scope: dto.scope,
+    summary: {
+      expected: dto.summary.expected,
+      onCampus: dto.summary.on_campus,
+      onBus: dto.summary.on_bus,
+      leftCampus: dto.summary.left_campus,
+      notArrived: dto.summary.not_arrived,
+      alertsToday: dto.summary.alerts_today,
+      lastEventAt: dto.summary.last_event_at,
+    },
+    zones: dto.zones.map((zone) => ({
+      zone: zone.zone,
+      label: zoneLabel[zone.zone],
+      count: zone.count,
+    })),
+    students: dto.students.map(toPresenceStudent),
+    events: dto.events.map(toPresenceEvent),
+    headcount: {
+      expected: dto.headcount.expected,
+      present: dto.headcount.present,
+      byClass: dto.headcount.by_class,
+    },
+    checkpoints: dto.checkpoints,
+  }
+}
+
+export function toParentChild(row: ParentChildDto): ParentChildView {
+  return {
+    usn: row.usn,
+    name: row.name,
+    initials: initials(row.name),
+    classLabel: row.class_label,
+    section: row.section,
+    relationship: row.relationship,
+    state: row.presence.state,
+    stateLabel: row.presence.state_label,
+    checkpoint: row.presence.checkpoint
+      ? toCheckpointView(row.presence.checkpoint, row.level)
+      : null,
+    time: row.presence.occurred_at ? formatShortTime(row.presence.occurred_at) : '—',
+    card: row.card
+      ? {
+          id: row.card.card_uid,
+          status: row.card.status,
+          battery: row.card.battery ?? 0,
+          lastSync: formatRelative(row.card.last_sync_at),
+          validTo: formatMonthYear(row.card.valid_to),
+          nfcUid: row.card.nfc_uid ?? '—',
+          uhfTagId: row.card.uhf_tag_id ?? '—',
+        }
+      : null,
+  }
+}
+
+export function toParentChildren(dto: ParentChildrenDto): ParentChildrenView {
+  return { children: dto.children.map(toParentChild) }
+}
+
+export function toParentAlert(row: ParentAlertDto): ParentAlertView {
+  return {
+    id: row.id,
+    student: {
+      usn: row.student.usn,
+      name: row.student.name,
+      initials: initials(row.student.name),
+    },
+    channel: row.channel,
+    status: row.status,
+    title: row.title,
+    message: row.message,
+    time: formatShortTime(row.created_at),
+    checkpoint: row.checkpoint ? toCheckpointView(row.checkpoint, 'school') : null,
+  }
+}
+
+export function toParentChildDetail(dto: ParentChildDetailDto): ParentChildDetailView {
+  return {
+    child: toParentChild(dto.child),
+    events: dto.events.map((event) => ({
+      id: event.id,
+      checkpoint: toCheckpointView(event.checkpoint, 'school'),
+      direction: event.direction,
+      method: event.method,
+      time: formatShortTime(event.occurred_at),
+    })),
+    alerts: dto.alerts.map(toParentAlert),
+  }
+}
+
+export function toParentAlerts(dto: ParentAlertsDto): ParentAlertsView {
+  return {
+    alerts: dto.alerts.map(toParentAlert),
+    summary: dto.summary,
   }
 }

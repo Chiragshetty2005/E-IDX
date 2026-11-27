@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
+  Bell,
   BookOpen,
   CalendarCheck,
   ChartLineUp,
   IdentificationCard,
   List,
+  MapPinLine,
   Scan,
   ShieldCheck,
   SignOut,
@@ -28,6 +30,7 @@ interface NavItem {
 const navByRole: Record<Role, NavItem[]> = {
   admin: [
     { to: '/admin', label: 'Overview', icon: SquaresFour, end: true },
+    { to: '/admin/presence', label: 'Campus presence', icon: MapPinLine },
     { to: '/admin/students', label: 'Students and cards', icon: IdentificationCard },
     { to: '/admin/verifications', label: 'Verification log', icon: ShieldCheck },
     { to: '/admin/insights', label: 'Academic intelligence', icon: ChartLineUp },
@@ -37,6 +40,10 @@ const navByRole: Record<Role, NavItem[]> = {
     { to: '/faculty', label: 'Cohort', icon: UsersThree, end: true },
     { to: '/faculty/sessions', label: 'Attendance sessions', icon: CalendarCheck },
     { to: '/verify', label: 'Verification console', icon: Scan },
+  ],
+  parent: [
+    { to: '/parent', label: 'Children', icon: UsersThree, end: true },
+    { to: '/parent/alerts', label: 'Alerts', icon: Bell },
   ],
   student: [
     { to: '/student', label: 'My card', icon: IdentificationCard, end: true },
@@ -91,6 +98,7 @@ function RoleSwitcher({ id, onSwitch }: { id: string; onSwitch?: () => void }) {
       >
         <option value="admin">Admin, card services</option>
         <option value="faculty">Faculty, CSE</option>
+        <option value="parent">Parent or guardian</option>
         <option value="student">Student, card holder</option>
       </select>
       <p className="mt-1 caption-5 text-ink-500">

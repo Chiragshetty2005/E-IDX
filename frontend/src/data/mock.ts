@@ -76,6 +76,8 @@ function makeStudent(seed: StudentSeed): Student {
     usn: seed.usn,
     name: seed.name,
     initials: initials(seed.name),
+    level: 'college',
+    classLabel: null,
     programme: 'B.E. Computer science and engineering',
     semester: 'Semester VI',
     section: 'Section A',
@@ -97,6 +99,8 @@ function makeStudent(seed: StudentSeed): Student {
       lastSync: seed.lastSync,
       validTo: seed.cardValidity ?? defaultValidity,
       firmware: '1.4.2',
+      nfcUid: `NFC-${seed.usn.slice(-6)}`,
+      uhfTagId: `UHF-7F3A-${seed.usn.slice(-4)}`,
     },
     courses,
     sgpa: sgpa(seed.sgpaValues),
@@ -645,5 +649,6 @@ export const feeReceipts = [
 export const users = {
   admin: { name: 'Kavya Srinivas', detail: 'Card services', initials: 'KS' },
   faculty: { name: 'Dr. Shahin Fatima', detail: 'Associate professor, CSE', initials: 'SF' },
+  parent: { name: 'Rohit Menon', detail: 'Parent or guardian', initials: 'RM' },
   student: { name: demoStudent.name, detail: `${demoStudent.usn}, ${demoStudent.semester}`, initials: demoStudent.initials },
 }
